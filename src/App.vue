@@ -14,7 +14,7 @@ import StatusBar from "./components/StatusBar.vue";
       <div class="w-1/6 overflow-auto h-full">
         <SidePanel />
       </div>
-      <div class="flex-1 overflow-auto h-full">
+      <div class="flex-1 overflow-hidden h-full relative">
         <EditorPanel />
       </div>
     </div>

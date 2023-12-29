@@ -5,7 +5,11 @@ export default {
     "./src/**/*.{vue,js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        "code": "Consolas, ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
+      }
+    },
   },
   plugins: [],
 }
