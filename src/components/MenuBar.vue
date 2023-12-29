@@ -2,7 +2,9 @@
 import { open } from "@tauri-apps/api/dialog";
 import { invoke } from "@tauri-apps/api";
 import { useStatusStore } from "../stores/status";
+import { useEditorStore } from "../stores/editor";
 
+const editorStore = useEditorStore();
 const statusStore = useStatusStore();
 
 async function open_file() {
@@ -10,10 +12,15 @@ async function open_file() {
   if (selected !== null) {
     // user selected a single file
     console.log(selected);
-    invoke("read_file_content", { path: selected })
-      .then((content) => {
+    invoke("create_buffer_from_file_path", { path: selected })
+      .then((success) => {
         statusStore.encoding = "utf8";
-        console.log(content);
+        editorStore.buffer_idx = 0;
+        console.log(success);
+        invoke("get_highlighted_code", { bufferId: 0 }).then((content) => {
+          console.log(content);
+          editorStore.content = content.code;
+        });
       })
       .catch((error) => {
         statusStore.encoding = "Unknown";
@@ -25,7 +32,6 @@ async function open_file() {
 
 <template>
   <div class="bg-slate-900 p-1">
-    MenuBar
     <button type="button" @click="open_file()">Open File</button>
   </div>
 </template>

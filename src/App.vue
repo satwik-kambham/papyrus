@@ -10,11 +10,11 @@ import StatusBar from "./components/StatusBar.vue";
     <div class="">
       <MenuBar />
     </div>
-    <div class="flex grow">
-      <div class="w-1/6">
+    <div class="flex flex-1 overflow-auto">
+      <div class="w-1/6 overflow-auto h-full">
         <SidePanel />
       </div>
-      <div class="grow">
+      <div class="flex-1 overflow-auto h-full">
         <EditorPanel />
       </div>
     </div>

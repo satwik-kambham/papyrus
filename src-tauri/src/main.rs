@@ -1,12 +1,26 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-pub mod core;
+use std::sync::RwLock;
+
+use state::InitCell;
+
+pub mod commands;
+pub mod editor;
+pub mod editor_io;
+
+#[cfg(test)]
+pub mod tests;
+
+static EDITOR_STATE: InitCell<RwLock<editor::state::EditorState>> = InitCell::new();
 
 fn main() {
+    EDITOR_STATE.set(RwLock::new(editor::state::EditorState::new()));
+
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            core::file_handling::read_file_content
+            commands::create_buffer_from_file_path,
+            commands::get_highlighted_code,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
