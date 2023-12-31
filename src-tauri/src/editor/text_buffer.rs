@@ -4,9 +4,7 @@ use crate::editor::update;
 /// To be implemented by different buffer data structures
 pub trait TextBuffer {
     /// Returns highlighted code from start_line to end_line
-    fn get_highlighted_code(
-        &self,
-    ) -> highlight::HighlightedCode;
+    fn get_highlighted_code(&self) -> highlight::HighlightedCode;
 
     /// Update buffer data based on code changes
     fn update_code(u: update::Update);
@@ -30,9 +28,7 @@ impl LineTextBuffer {
 }
 
 impl TextBuffer for LineTextBuffer {
-    fn get_highlighted_code(
-        &self,
-    ) -> highlight::HighlightedCode {
+    fn get_highlighted_code(&self) -> highlight::HighlightedCode {
         let mut highlighted_code = highlight::HighlightedCode { code: vec![] };
 
         for line in self.lines.iter() {

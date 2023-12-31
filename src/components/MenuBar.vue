@@ -17,8 +17,7 @@ async function open_file() {
         statusStore.encoding = "utf8";
         editorStore.buffer_idx = 0;
         console.log(success);
-        invoke("get_highlighted_code", { bufferId: 0 }).then((content) => {
-          console.log(content);
+        invoke("get_highlighted_code").then((content) => {
           editorStore.content = content.code;
         });
       })
@@ -31,7 +30,7 @@ async function open_file() {
 </script>
 
 <template>
-  <div class="bg-slate-900 p-1">
+  <div class="bg-atom-bg-dark p-1">
     <button type="button" @click="open_file()">Open File</button>
   </div>
 </template>

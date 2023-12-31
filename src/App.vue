@@ -6,7 +6,7 @@ import StatusBar from "./components/StatusBar.vue";
 </script>
 
 <template>
-  <div class="bg-slate-700 text-slate-100 h-screen flex flex-col">
+  <div class="bg-atom-bg-dark text-atom-text h-screen flex flex-col">
     <div class="">
       <MenuBar />
     </div>
