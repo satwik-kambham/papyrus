@@ -1,42 +1,91 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useEditorStore } from "../stores/editor";
 import { useStatusStore } from "../stores/status";
 
 const statusStore = useStatusStore();
 const editorStore = useEditorStore();
 
+const editorElement = ref(null);
 const cursorElement = ref(null);
+const dummyElement = ref(null);
+const hiddenInput = ref(null);
+const currentLine = ref(null);
 const hOffset = ref(0);
 const vOffset = ref(0);
 const cursorHOffset = ref(0);
 const cursorVOffset = ref(0);
 
+// Setting cursor width based on a dummy element
+const cursorWidth = computed(() => {
+  return dummyElement.value?.offsetWidth;
+});
+const cursorHeight = computed(() => {
+  return dummyElement.value?.offsetHeight;
+});
+
+// Clamp value to the range from min to max
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
+// Scroll wheel event handler
 function wheel_event(e) {
   hOffset.value = clamp(
     hOffset.value - e.deltaX * 0.3,
-    -e.currentTarget.clientWidth + e.currentTarget.parentNode.clientWidth - 100,
+    -e.currentTarget.clientWidth + e.currentTarget.parentNode.clientWidth,
     0
   );
 
   vOffset.value = clamp(
     vOffset.value - e.deltaY * 0.3,
-    -e.currentTarget.clientHeight +
-      e.currentTarget.parentNode.clientHeight -
-      100,
+    -e.currentTarget.clientHeight + e.currentTarget.parentNode.clientHeight,
     0
   );
 }
 
+// Set cursor position at given row and column
+function setCursorPosition(row, column) {
+  let tempColumn = column;
+  let tokens = editorElement.value.children[row].firstChild.children;
+  let currentToken = null;
+  for (let i = 0; i < tokens.length; i++) {
+    const element = tokens[i];
+    if (tempColumn <= element.textContent.length) {
+      currentToken = element;
+      break;
+    }
+    tempColumn -= element.textContent.length;
+  }
+
+  if (currentToken.firstChild != null) {
+    let range = document.createRange();
+    range.setStart(currentToken.firstChild, 0);
+    range.setEnd(currentToken.firstChild, tempColumn);
+
+    cursorVOffset.value = editorElement.value.children[row].offsetTop;
+    cursorHOffset.value =
+      range.getBoundingClientRect().right -
+      cursorElement.value?.parentNode.offsetLeft -
+      hOffset.value;
+  } else {
+    cursorVOffset.value = editorElement.value.children[row].offsetTop;
+    cursorHOffset.value = 0;
+  }
+}
+
+// Mouse click event handler
 function click_event(e) {
+  e.preventDefault();
+
   let range;
   let textNode;
   let offset;
   let boundingRect;
+  let row = 0;
+  let column = 0;
+
+  // Try to find text node and exact position in the text node where the user clicked
   if (document.caretPositionFromPoint) {
     range = document.caretPositionFromPoint(e.clientX, e.clientY);
     textNode = range.offsetNode;
@@ -52,44 +101,65 @@ function click_event(e) {
     console.error("Cannot handle click as caret APIs not supported");
     return;
   }
+
   if (textNode?.nodeType === 3) {
-    let children = Array.from(textNode.parentNode.parentNode.children);
-    let current = children.indexOf(textNode.parentNode);
-    let length = offset;
-    let row = Math.floor(
+    // If user clicked on text
+    // Calculating row and column
+    row = Math.floor(
       e.target.parentNode.offsetTop / e.target.parentNode.clientHeight
     );
 
+    let children = Array.from(
+      editorElement.value.children[row].firstChild.children
+    );
+    let current = children.indexOf(textNode.parentNode);
+    column = offset;
+
     children.slice(0, current).forEach((child) => {
-      length += child.textContent.length;
+      column += child.textContent.length;
     });
-    console.log("Row: " + row + " Column: " + length);
+
+    console.log("Row: " + row + " Column: " + column);
     statusStore.cursorRow = row;
-    statusStore.cursorColumn = length;
-    cursorVOffset.value = e.target.parentNode.offsetTop;
-    cursorHOffset.value =
-      boundingRect.right - cursorElement.value?.parentNode.offsetLeft;
+    statusStore.cursorColumn = column;
   } else if (textNode?.nodeType === 1) {
-    let length;
-    let row = Math.floor(e.target.offsetTop / e.target.clientHeight);
+    // If user clicked outside the text
+    // Calculating row
+    row = Math.floor(e.target.offsetTop / e.target.clientHeight);
     if (offset != 0) {
-      length = textNode.textContent.length;
+      // If user did not click on the outer editor div
+      // Setting column to end of line
+      column = textNode.textContent.length;
+
+      console.log("Outside bounds -> Row: " + row + " Column: " + column);
       statusStore.cursorRow = row;
-      statusStore.cursorColumn = length;
-      console.log("Outside bounds -> Row: " + row + " Column: " + length);
-      cursorVOffset.value = e.target.offsetTop;
-      cursorHOffset.value = textNode.clientWidth;
+      statusStore.cursorColumn = column;
     }
   }
+
+  setCursorPosition(row, column);
+
+  if (currentLine.value != null) {
+    currentLine.value.classList.remove("bg-atom-bg-light");
+  }
+  currentLine.value = editorElement.value.children[row];
+  currentLine.value.classList.add("bg-atom-bg-light");
+
+  hiddenInput.value?.focus();
+}
+
+// Keyboard event handler
+function key_event(e) {
+  e.preventDefault();
+  console.log(e);
 }
 </script>
 <template>
   <div
-    class="bg-atom-bg min-h-full font-code antialiased text-lg absolute min-w-full overflow-visible h-fit w-fit"
+    ref="editorElement"
+    class="bg-atom-bg min-h-full font-code antialiased text-lg absolute min-w-full overflow-visible h-fit w-fit cursor-text"
     @wheel="wheel_event"
     @mousedown="click_event"
-    @focusin=""
-    @focusout=""
     :style="{ top: vOffset + 'px', left: hOffset + 'px' }"
   >
     <div class="" v-for="line in editorStore.content">
@@ -102,12 +172,27 @@ function click_event(e) {
   </div>
   <div
     ref="cursorElement"
-    class="absolute font-code text-lg antialiased text-atom-primary bg-atom-text"
+    class="absolute font-code text-lg antialiased border-atom-primary border-l-2 pointer-events-none select-none animate-blink"
     :style="{
       top: vOffset + cursorVOffset + 'px',
       left: hOffset + cursorHOffset + 'px',
+      width: cursorWidth + 'px',
+      height: cursorHeight + 'px',
     }"
   >
-    C
+    <input
+      ref="hiddenInput"
+      class="opacity-0"
+      tabindex="-1"
+      type="text"
+      @keydown="key_event"
+      :style="{
+        width: 1 + 'px',
+        height: cursorHeight + 'px',
+      }"
+    />
+  </div>
+  <div class="absolute invisible whitespace-pre text-lg" ref="dummyElement">
+    <span>x</span>
   </div>
 </template>
