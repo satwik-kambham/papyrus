@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { invoke } from "@tauri-apps/api";
 import { useEditorStore } from "../stores/editor";
 import { useStatusStore } from "../stores/status";
 
@@ -151,7 +152,22 @@ function click_event(e) {
 // Keyboard event handler
 function key_event(e) {
   e.preventDefault();
-  console.log(e);
+  if (e.key.length == 1 || e.key === "Enter") {
+    let key = e.key;
+    if (key === "Enter") key = "\n";
+    invoke("insert_text", {
+      text: key,
+      cursor: {
+        row: statusStore.cursorRow,
+        column: statusStore.cursorColumn,
+      },
+    }).then((update) => {
+      editorStore.content = update[0].text;
+      setCursorPosition(update[1].row, update[1].column);
+      statusStore.cursorRow = update[1].row;
+      statusStore.cursorColumn = update[1].column;
+    });
+  }
 }
 </script>
 <template>

@@ -1,4 +1,4 @@
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 /// Types of highlighted tokens
 pub enum HighlightType {
     None,
@@ -9,8 +9,8 @@ pub enum HighlightType {
     Bracket,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-/// Syntax highlighted code
-pub struct HighlightedCode {
-    pub code: Vec<Vec<(HighlightType, String)>>,
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+/// Syntax highlighted text
+pub struct HighlightedText {
+    pub text: Vec<Vec<(HighlightType, String)>>,
 }

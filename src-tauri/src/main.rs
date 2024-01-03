@@ -20,7 +20,8 @@ fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             commands::create_buffer_from_file_path,
-            commands::get_highlighted_code,
+            commands::get_highlighted_text,
+            commands::insert_text,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

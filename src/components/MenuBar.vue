@@ -17,8 +17,8 @@ async function open_file() {
         statusStore.encoding = "utf8";
         editorStore.buffer_idx = 0;
         console.log(success);
-        invoke("get_highlighted_code").then((content) => {
-          editorStore.content = content.code;
+        invoke("get_highlighted_text").then((content) => {
+          editorStore.content = content.text;
         });
       })
       .catch((error) => {
