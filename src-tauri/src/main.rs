@@ -22,6 +22,8 @@ fn main() {
             commands::create_buffer_from_file_path,
             commands::get_highlighted_text,
             commands::insert_text,
+            commands::remove_text,
+            commands::get_row_length,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

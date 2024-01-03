@@ -43,6 +43,11 @@ impl LineTextBuffer {
         highlighted_text
     }
 
+    /// Returns the column length of the given row
+    pub fn get_row_length(&self, cursor: Cursor) -> usize {
+        self.lines[cursor.row].len()
+    }
+
     /// Insert text at cursor position and returns the updated cursor position
     pub fn insert_text(&mut self, text: String, cursor: Cursor) -> Cursor {
         let mut updated_cursor = cursor.clone();
@@ -66,7 +71,34 @@ impl LineTextBuffer {
     }
 
     /// Remove the selected text and returns the updated cursor position
-    pub fn remove_text(&mut self, selection: Selection) -> Selection {
-        todo!()
+    /// and the deleted text
+    pub fn remove_text(&mut self, selection: Selection) -> (String, Cursor) {
+        if selection.start.row == selection.end.row {
+            let current_line = self.lines[selection.start.row].clone();
+            let (first, second) = current_line.split_at(selection.end.column);
+            let (first, middle) = first.split_at(selection.start.column);
+            self.lines[selection.start.row] = first.to_owned() + second;
+            (middle.to_owned(), selection.start)
+        } else {
+            let mut buf = String::new();
+
+            let current_line = self.lines[selection.end.row].clone();
+            let (first, second) = current_line.split_at(selection.end.column);
+            buf.insert_str(0, first);
+            self.lines.remove(selection.end.row);
+
+            for i in (selection.start.row + 1..selection.end.row).rev() {
+                let current_line = self.lines.remove(i);
+                buf.insert(0, '\n');
+                buf.insert_str(0, &current_line);
+            }
+
+            let current_line = self.lines[selection.start.row].clone();
+            let (first, middle) = current_line.split_at(selection.start.column);
+            buf.insert(0, '\n');
+            buf.insert_str(0, middle);
+            self.lines[selection.start.row] = first.to_owned() + second;
+            (buf, selection.start)
+        }
     }
 }

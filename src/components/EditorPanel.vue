@@ -152,6 +152,7 @@ function click_event(e) {
 // Keyboard event handler
 function key_event(e) {
   e.preventDefault();
+
   if (e.key.length == 1 || e.key === "Enter") {
     let key = e.key;
     if (key === "Enter") key = "\n";
@@ -167,6 +168,61 @@ function key_event(e) {
       statusStore.cursorRow = update[1].row;
       statusStore.cursorColumn = update[1].column;
     });
+  } else if (e.key === "Backspace") {
+    if (statusStore.cursorRow != 0 || statusStore.cursorColumn != 0) {
+      if (statusStore.cursorColumn != 0) {
+        let s = {
+          start: {
+            row: statusStore.cursorRow,
+            column: statusStore.cursorColumn - 1,
+          },
+          end: {
+            row: statusStore.cursorRow,
+            column: statusStore.cursorColumn,
+          },
+        };
+
+        invoke("remove_text", {
+          selection: s,
+        }).then((update) => {
+          editorStore.content = update[0].text;
+          let removed_text = update[1];
+          console.log(removed_text);
+          setCursorPosition(update[2].row, update[2].column);
+          statusStore.cursorRow = update[2].row;
+          statusStore.cursorColumn = update[2].column;
+        });
+      } else {
+        let prev_row_length;
+        invoke("get_row_length", {
+          cursor: {
+            row: statusStore.cursorRow - 1,
+            column: 0,
+          },
+        }).then((row_length) => {
+          prev_row_length = row_length;
+          let s = {
+            start: {
+              row: statusStore.cursorRow - 1,
+              column: prev_row_length,
+            },
+            end: {
+              row: statusStore.cursorRow,
+              column: 0,
+            },
+          };
+          invoke("remove_text", {
+            selection: s,
+          }).then((update) => {
+            editorStore.content = update[0].text;
+            let removed_text = update[1];
+            setCursorPosition(update[2].row, update[2].column);
+            statusStore.cursorRow = update[2].row;
+            statusStore.cursorColumn = update[2].column;
+          });
+        });
+      }
+    }
   }
 }
 </script>
