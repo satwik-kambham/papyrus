@@ -73,6 +73,14 @@ function setCursorPosition(row, column) {
     cursorVOffset.value = editorElement.value.children[row].offsetTop;
     cursorHOffset.value = 0;
   }
+
+  if (currentLine.value != null) {
+    currentLine.value.classList.remove("bg-atom-bg-light");
+  }
+  currentLine.value = editorElement.value.children[row];
+  currentLine.value.classList.add("bg-atom-bg-light");
+
+  hiddenInput.value?.focus();
 }
 
 // Mouse click event handler
@@ -139,14 +147,6 @@ function click_event(e) {
   }
 
   setCursorPosition(row, column);
-
-  if (currentLine.value != null) {
-    currentLine.value.classList.remove("bg-atom-bg-light");
-  }
-  currentLine.value = editorElement.value.children[row];
-  currentLine.value.classList.add("bg-atom-bg-light");
-
-  hiddenInput.value?.focus();
 }
 
 // Insert character after cursor
