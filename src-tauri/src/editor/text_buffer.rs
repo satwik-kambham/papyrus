@@ -44,8 +44,13 @@ impl LineTextBuffer {
     }
 
     /// Returns the column length of the given row
-    pub fn get_row_length(&self, cursor: Cursor) -> usize {
-        self.lines[cursor.row].len()
+    pub fn get_row_length(&self, row: usize) -> usize {
+        self.lines[row].len()
+    }
+
+    /// Returns the number of lines in the buffer
+    pub fn get_lines_length(&self) -> usize {
+        self.lines.len()
     }
 
     /// Insert text at cursor position and returns the updated cursor position

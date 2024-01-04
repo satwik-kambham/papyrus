@@ -24,6 +24,7 @@ fn main() {
             commands::insert_text,
             commands::remove_text,
             commands::get_row_length,
+            commands::get_lines_length,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

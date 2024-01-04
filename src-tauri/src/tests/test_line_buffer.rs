@@ -67,8 +67,17 @@ fn get_row_length() {
     let initial_code = "This\nis\na\\nsimple\nfile\\n".into();
 
     let buffer = LineTextBuffer::new(initial_code);
-    let row_length = buffer.get_row_length(Cursor { row: 3, column: 0 });
+    let row_length = buffer.get_row_length(3);
     assert_eq!(row_length, 6);
+}
+
+#[test]
+fn get_lines_length() {
+    let initial_code = "This\nis\na\\nsimple\nfile\\n".into();
+
+    let buffer = LineTextBuffer::new(initial_code);
+    let lines_length = buffer.get_lines_length();
+    assert_eq!(lines_length, 4);
 }
 
 #[test]

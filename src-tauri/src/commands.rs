@@ -20,9 +20,16 @@ pub fn get_highlighted_text() -> highlight::HighlightedText {
 }
 
 #[tauri::command]
-pub fn get_row_length(cursor: Cursor) -> usize {
+pub fn get_row_length(row: usize) -> usize {
     let editor_state = EDITOR_STATE.get().read().unwrap();
-    let row_length = editor_state.text_buffer.get_row_length(cursor);
+    let row_length = editor_state.text_buffer.get_row_length(row);
+    row_length
+}
+
+#[tauri::command]
+pub fn get_lines_length() -> usize {
+    let editor_state = EDITOR_STATE.get().read().unwrap();
+    let row_length = editor_state.text_buffer.get_lines_length();
     row_length
 }
 

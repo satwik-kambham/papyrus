@@ -149,80 +149,174 @@ function click_event(e) {
   hiddenInput.value?.focus();
 }
 
+// Insert character after cursor
+async function insert_character(character) {
+  let update = await invoke("insert_text", {
+    text: character,
+    cursor: {
+      row: statusStore.cursorRow,
+      column: statusStore.cursorColumn,
+    },
+  });
+  editorStore.content = update[0].text;
+  setCursorPosition(update[1].row, update[1].column);
+  statusStore.cursorRow = update[1].row;
+  statusStore.cursorColumn = update[1].column;
+}
+
+// Remove character before cursor
+async function remove_character() {
+  let prev_row_length = await get_row_length(statusStore.cursorRow - 1);
+
+  if (statusStore.cursorRow != 0 || statusStore.cursorColumn != 0) {
+    let s;
+    if (statusStore.cursorColumn != 0) {
+      s = {
+        start: {
+          row: statusStore.cursorRow,
+          column: statusStore.cursorColumn - 1,
+        },
+        end: {
+          row: statusStore.cursorRow,
+          column: statusStore.cursorColumn,
+        },
+      };
+    } else {
+      s = {
+        start: {
+          row: statusStore.cursorRow - 1,
+          column: prev_row_length,
+        },
+        end: {
+          row: statusStore.cursorRow,
+          column: 0,
+        },
+      };
+    }
+    let update = await invoke("remove_text", {
+      selection: s,
+    });
+    editorStore.content = update[0].text;
+    let removed_text = update[1];
+    setCursorPosition(update[2].row, update[2].column);
+    statusStore.cursorRow = update[2].row;
+    statusStore.cursorColumn = update[2].column;
+  }
+}
+
+// Get lines length (total rows)
+async function get_lines_length() {
+  let lines_length = await invoke("get_lines_length");
+  return lines_length;
+}
+
+// Get row length
+async function get_row_length(row_number) {
+  let row_length = await await invoke("get_row_length", {
+    row: row_number,
+  });
+  return row_length;
+}
+
+// Move cursor up
+async function move_cursor_up() {
+  if (statusStore.cursorRow == 0) {
+    await move_cursor_line_start();
+  } else {
+    let column = Math.min(
+      statusStore.cursorColumn,
+      await get_row_length(statusStore.cursorRow - 1)
+    );
+    setCursorPosition(statusStore.cursorRow - 1, column);
+    statusStore.cursorRow -= 1;
+    statusStore.cursorColumn = column;
+  }
+}
+
+// Move cursor down
+async function move_cursor_down() {
+  if (statusStore.cursorRow == (await get_lines_length()) - 1) {
+    await move_cursor_line_end();
+  } else {
+    let column = Math.min(
+      statusStore.cursorColumn,
+      await get_row_length(statusStore.cursorRow + 1)
+    );
+    setCursorPosition(statusStore.cursorRow + 1, column);
+    statusStore.cursorRow += 1;
+    statusStore.cursorColumn = column;
+  }
+}
+
+// Move cursor left
+async function move_cursor_left() {
+  if (statusStore.cursorColumn == 0) {
+    // Move to end of previous line
+    if (statusStore.cursorRow != 0) {
+      let column = await get_row_length(statusStore.cursorRow - 1);
+      setCursorPosition(statusStore.cursorRow - 1, column);
+      statusStore.cursorRow -= 1;
+      statusStore.cursorColumn = column;
+    }
+  } else {
+    setCursorPosition(statusStore.cursorRow, statusStore.cursorColumn - 1);
+    statusStore.cursorColumn -= 1;
+  }
+}
+
+// Move cursor right
+async function move_cursor_right() {
+  if (
+    statusStore.cursorColumn == (await get_row_length(statusStore.cursorRow))
+  ) {
+    // Move to start of next line
+    if (statusStore.cursorRow != (await get_lines_length()) - 1) {
+      let column = 0;
+      setCursorPosition(statusStore.cursorRow + 1, column);
+      statusStore.cursorRow += 1;
+      statusStore.cursorColumn = column;
+    }
+  } else {
+    setCursorPosition(statusStore.cursorRow, statusStore.cursorColumn + 1);
+    statusStore.cursorColumn += 1;
+  }
+}
+
+// Move cursor to start of line
+async function move_cursor_line_start() {
+  setCursorPosition(statusStore.cursorRow, 0);
+  statusStore.cursorColumn = 0;
+}
+
+// Move cursor to end of line
+async function move_cursor_line_end() {
+  let column = await get_row_length(statusStore.cursorRow);
+  setCursorPosition(statusStore.cursorRow, column);
+  statusStore.cursorColumn = column;
+}
+
 // Keyboard event handler
-function key_event(e) {
+async function key_event(e) {
   e.preventDefault();
 
   if (e.key.length == 1 || e.key === "Enter") {
     let key = e.key;
     if (key === "Enter") key = "\n";
-    invoke("insert_text", {
-      text: key,
-      cursor: {
-        row: statusStore.cursorRow,
-        column: statusStore.cursorColumn,
-      },
-    }).then((update) => {
-      editorStore.content = update[0].text;
-      setCursorPosition(update[1].row, update[1].column);
-      statusStore.cursorRow = update[1].row;
-      statusStore.cursorColumn = update[1].column;
-    });
+    await insert_character(key);
   } else if (e.key === "Backspace") {
-    if (statusStore.cursorRow != 0 || statusStore.cursorColumn != 0) {
-      if (statusStore.cursorColumn != 0) {
-        let s = {
-          start: {
-            row: statusStore.cursorRow,
-            column: statusStore.cursorColumn - 1,
-          },
-          end: {
-            row: statusStore.cursorRow,
-            column: statusStore.cursorColumn,
-          },
-        };
-
-        invoke("remove_text", {
-          selection: s,
-        }).then((update) => {
-          editorStore.content = update[0].text;
-          let removed_text = update[1];
-          console.log(removed_text);
-          setCursorPosition(update[2].row, update[2].column);
-          statusStore.cursorRow = update[2].row;
-          statusStore.cursorColumn = update[2].column;
-        });
-      } else {
-        let prev_row_length;
-        invoke("get_row_length", {
-          cursor: {
-            row: statusStore.cursorRow - 1,
-            column: 0,
-          },
-        }).then((row_length) => {
-          prev_row_length = row_length;
-          let s = {
-            start: {
-              row: statusStore.cursorRow - 1,
-              column: prev_row_length,
-            },
-            end: {
-              row: statusStore.cursorRow,
-              column: 0,
-            },
-          };
-          invoke("remove_text", {
-            selection: s,
-          }).then((update) => {
-            editorStore.content = update[0].text;
-            let removed_text = update[1];
-            setCursorPosition(update[2].row, update[2].column);
-            statusStore.cursorRow = update[2].row;
-            statusStore.cursorColumn = update[2].column;
-          });
-        });
-      }
-    }
+    await remove_character();
+  } else if (e.key === "ArrowUp") {
+    await move_cursor_up();
+  } else if (e.key === "ArrowLeft") {
+    await move_cursor_left();
+  } else if (e.key === "ArrowDown") {
+    await move_cursor_down();
+  } else if (e.key === "ArrowRight") {
+    await move_cursor_right();
+  } else if (e.key === "Home") {
+    await move_cursor_line_start();
+  } else if (e.key === "End") {
+    await move_cursor_line_end();
   }
 }
 </script>
