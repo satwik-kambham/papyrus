@@ -17,6 +17,16 @@ export default {
           "text": "#abb2bf",
           "text-dark": "#58727d",
           "primary": "#61afef",
+          "highlight-None": "#abb2bf",
+          "highlight-White": "#abb2bf",
+          "highlight-Red": "#e06c75",
+          "highlight-Orange": "#d19a66",
+          "highlight-Blue": "#5faae8",
+          "highlight-Green": "#98c379",
+          "highlight-Purple": "#c678dd",
+          "highlight-Yellow": "#e5c07b",
+          "highlight-Gray": "#5c6370",
+          "highlight-Turquoise": "#56b6c2",
         }
       },
       keyframes: {

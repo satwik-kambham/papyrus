@@ -1,5 +1,5 @@
 use crate::editor::highlight;
-use crate::editor::text_buffer::{Cursor, LineTextBuffer, Selection};
+use crate::editor::text_buffer::{Cursor, Language, LineTextBuffer, Selection};
 use crate::editor_io::file_handling;
 use crate::EDITOR_STATE;
 
@@ -9,14 +9,15 @@ pub fn create_buffer_from_file_path(path: String) -> Result<String, String> {
 
     let mut editor_state = EDITOR_STATE.get().write().unwrap();
     editor_state.text_buffer = LineTextBuffer::new(buf);
+    editor_state.text_buffer.language = Language::Python;
 
     Ok("Success".into())
 }
 
 #[tauri::command]
 pub fn get_highlighted_text() -> highlight::HighlightedText {
-    let editor_state = EDITOR_STATE.get().read().unwrap();
-    editor_state.text_buffer.get_highlighted_text()
+    let mut editor_state = EDITOR_STATE.get().write().unwrap();
+    editor_state.text_buffer.highlight_complete_text()
 }
 
 #[tauri::command]

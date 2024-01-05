@@ -330,7 +330,10 @@ async function key_event(e) {
   >
     <div class="" v-for="line in editorStore.content">
       <span class="inline-block">
-        <span class="whitespace-pre" v-for="token in line">
+        <span
+          :class="['whitespace-pre', 'text-atom-highlight-' + token[0]]"
+          v-for="token in line"
+        >
           {{ token[1] }}
         </span>
       </span>
@@ -358,7 +361,10 @@ async function key_event(e) {
       }"
     />
   </div>
-  <div class="absolute invisible whitespace-pre text-lg" ref="dummyElement">
+  <div
+    class="absolute invisible whitespace-pre text-lg text-atom-highlight-None text-atom-highlight-White text-atom-highlight-Red text-atom-highlight-Orange text-atom-highlight-Blue text-atom-highlight-Green text-atom-highlight-Purple text-atom-highlight-Yellow text-atom-highlight-Gray text-atom-highlight-Turquoise"
+    ref="dummyElement"
+  >
     <span>x</span>
   </div>
 </template>

@@ -1,5 +1,7 @@
 use crate::editor::highlight;
 
+use super::highlight::LanguageHighlightTypeMapping;
+
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Cursor {
     pub row: usize,
@@ -12,9 +14,17 @@ pub struct Selection {
     pub end: Cursor,
 }
 
+pub enum Language {
+    PlainText,
+    Python,
+}
+
 /// Basic text buffer implementation using lines
 pub struct LineTextBuffer {
     pub lines: Vec<String>,
+    pub syntax_tree: Option<tree_sitter::Tree>,
+    pub language: Language,
+    pub tokens: Option<Vec<(tree_sitter::Range, String)>>,
 }
 
 impl LineTextBuffer {
@@ -26,11 +36,15 @@ impl LineTextBuffer {
             lines.push("".into());
         }
 
-        Self { lines }
+        Self {
+            lines,
+            syntax_tree: None,
+            language: Language::PlainText,
+            tokens: None,
+        }
     }
 
-    /// Highlights the entire text (Language specific)
-    /// TODO: Create a variant that updates the highlighting and passes only the changed lines
+    /// Highlights the entire text in plain text
     pub fn get_highlighted_text(&self) -> highlight::HighlightedText {
         let mut highlighted_text = highlight::HighlightedText { text: vec![] };
 
@@ -38,6 +52,150 @@ impl LineTextBuffer {
             highlighted_text
                 .text
                 .push(vec![(highlight::HighlightType::None, line.clone())])
+        }
+
+        highlighted_text
+    }
+
+    /// Create syntax tree for the current language
+    fn create_syntax_tree(&mut self) {
+        let mut parser = tree_sitter::Parser::new();
+        match self.language {
+            Language::Python => {
+                parser
+                    .set_language(tree_sitter_python::language())
+                    .expect("Tree sitter version mismatch");
+            }
+            _ => {
+                return;
+            }
+        }
+        let tree = parser
+            .parse_with(
+                &mut |_byte: usize, position: tree_sitter::Point| -> &[u8] {
+                    let row = position.row as usize;
+                    let column = position.column as usize;
+                    if row < self.lines.len() {
+                        if column < self.lines[row].as_bytes().len() {
+                            &self.lines[row].as_bytes()[column..]
+                        } else {
+                            "\n".as_bytes()
+                        }
+                    } else {
+                        &[]
+                    }
+                },
+                None,
+            )
+            .unwrap();
+
+        self.syntax_tree = Some(tree);
+    }
+
+    /// Gets leaf node information from syntax tree
+    fn get_highlighted_tokens(&mut self, cursor: &mut tree_sitter::TreeCursor, parent_kind: &str) {
+        let current_kind = parent_kind.to_owned() + "." + cursor.node().kind();
+        if cursor.node().child_count() == 0 {
+            self.tokens
+                .as_mut()
+                .unwrap()
+                .push((cursor.node().range(), current_kind));
+        } else {
+            if cursor.goto_first_child() {
+                self.get_highlighted_tokens(cursor, &current_kind);
+                cursor.goto_parent();
+            }
+        }
+
+        if cursor.goto_next_sibling() {
+            self.get_highlighted_tokens(cursor, parent_kind);
+        }
+    }
+
+    /// Highlights the entire text for the current language
+    pub fn highlight_complete_text(&mut self) -> highlight::HighlightedText {
+        self.tokens = Some(vec![]);
+        self.create_syntax_tree();
+        let syntax_tree = self.syntax_tree.clone().unwrap();
+        self.get_highlighted_tokens(&mut syntax_tree.walk(), "root");
+        let mut highlighted_text = highlight::HighlightedText { text: vec![] };
+
+        let mapping = highlight::PythonMapping::new();
+
+        let mut tokens_iter = self.tokens.as_ref().unwrap().iter();
+        let mut lines_iter = self.lines.iter();
+
+        let mut cursor = Cursor { row: 0, column: 0 };
+        let end_cursor = Cursor {
+            row: self.get_lines_length() - 1,
+            column: self.get_row_length(self.get_lines_length() - 1),
+        };
+        let mut highlighted_line = vec![];
+
+        let mut current_token = tokens_iter.next();
+        let mut current_line = lines_iter.next().unwrap();
+        while cursor.row < end_cursor.row || cursor.column < end_cursor.column {
+            match current_token {
+                Some((current_range, kind)) => {
+                    if cursor.row <= current_range.start_point.row
+                        && cursor.column < current_range.start_point.column
+                    {
+                        // Need to add tokens before as none tokens
+                        let mut end_range = self.get_row_length(cursor.row);
+                        if cursor.row == current_range.start_point.row {
+                            end_range = current_range.start_point.column;
+                        }
+                        let token_slice = &current_line[cursor.column..end_range];
+                        highlighted_line
+                            .push((highlight::HighlightType::None, token_slice.to_string()));
+                        cursor.column = end_range;
+                        if cursor.row < current_range.start_point.row {
+                            cursor.row += 1;
+                            cursor.column = 0;
+                            highlighted_text.text.push(highlighted_line);
+                            highlighted_line = vec![];
+                            current_line = lines_iter.next().unwrap();
+                        }
+                    } else {
+                        // Add current range
+                        let mut end_range = self.get_row_length(cursor.row);
+                        if cursor.row == current_range.end_point.row {
+                            end_range = current_range.end_point.column;
+                        }
+                        let token_slice = &current_line[cursor.column..end_range];
+                        highlighted_line
+                            .push((mapping.get_highlight_type(&kind), token_slice.to_string()));
+                        cursor.column = end_range;
+                        if cursor.row < current_range.end_point.row {
+                            cursor.row += 1;
+                            cursor.column = 0;
+                            highlighted_text.text.push(highlighted_line);
+                            highlighted_line = vec![];
+                            current_line = lines_iter.next().unwrap();
+                        }
+                        // Go to next token
+                        current_token = tokens_iter.next();
+                    }
+                }
+                None => {
+                    // Add remaining tokens
+                    let mut end_range = self.get_row_length(cursor.row);
+                    if cursor.row == end_cursor.row {
+                        end_range = end_cursor.column;
+                    }
+                    let token_slice = &current_line[cursor.column..end_range];
+                    highlighted_line
+                        .push((highlight::HighlightType::None, token_slice.to_string()));
+                    cursor.column = end_range;
+                    if cursor.row < end_cursor.row {
+                        cursor.row += 1;
+                        cursor.column = 0;
+                        highlighted_text.text.push(highlighted_line);
+                        highlighted_line = vec![];
+                        current_line = lines_iter.next().unwrap();
+                    }
+                }
+            }
         }
 
         highlighted_text
