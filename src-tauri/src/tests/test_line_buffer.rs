@@ -111,6 +111,24 @@ fn insert_character_at_start() {
 }
 
 #[test]
+fn insert_character_at_line_end() {
+    let initial_code = "This\nis\na\\nsimple\nfile\\n".into();
+
+    let mut buffer = LineTextBuffer::new(initial_code);
+    let new_pos = buffer.insert_text("3".into(), Cursor { row: 1, column: 2 });
+    let lines = vec![
+        String::from("This"),
+        String::from("is3"),
+        String::from("a\\nsimple"),
+        String::from("file\\n"),
+    ];
+
+    assert_eq!(buffer.lines, lines);
+    assert_eq!(new_pos.row, 1);
+    assert_eq!(new_pos.column, 3);
+}
+
+#[test]
 fn insert_character_at_end() {
     let initial_code = "This\nis\na\\nsimple\nfile\\n".into();
 

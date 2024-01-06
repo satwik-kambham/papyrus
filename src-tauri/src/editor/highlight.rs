@@ -30,7 +30,16 @@ pub struct PythonMapping<'a> {
 impl<'a> PythonMapping<'a> {
     pub fn new() -> Self {
         Self {
-            mapping: vec![("identifier", HighlightType::Red)],
+            mapping: vec![
+                (".class_definition.argument_list.identifier", HighlightType::Yellow),
+                (".function_definition.identifier", HighlightType::Blue),
+                (".call.identifier", HighlightType::Blue),
+                (".identifier", HighlightType::Red),
+                (".class", HighlightType::Yellow),
+                (".comment", HighlightType::Gray),
+                (".import", HighlightType::Purple),
+                (".string_content", HighlightType::Green),
+            ],
         }
     }
 }

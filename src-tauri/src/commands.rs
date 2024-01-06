@@ -39,7 +39,7 @@ pub fn insert_text(text: String, cursor: Cursor) -> (highlight::HighlightedText,
     let mut editor_state = EDITOR_STATE.get().write().unwrap();
     let updated_cursor = editor_state.text_buffer.insert_text(text, cursor);
     (
-        editor_state.text_buffer.get_highlighted_text(),
+        editor_state.text_buffer.highlight_complete_text(),
         updated_cursor,
     )
 }
@@ -49,7 +49,7 @@ pub fn remove_text(selection: Selection) -> (highlight::HighlightedText, String,
     let mut editor_state = EDITOR_STATE.get().write().unwrap();
     let (removed_text, updated_cursor) = editor_state.text_buffer.remove_text(selection);
     (
-        editor_state.text_buffer.get_highlighted_text(),
+        editor_state.text_buffer.highlight_complete_text(),
         removed_text,
         updated_cursor,
     )
