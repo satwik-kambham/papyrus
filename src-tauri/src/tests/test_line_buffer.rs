@@ -1,18 +1,6 @@
 use crate::editor::text_buffer::{Cursor, Language, LineTextBuffer, Selection};
 
 #[test]
-fn tree_sitter_highlighting() {
-    let initial_code = String::from("print('Hello, World!')\nfor i in range(5):\n    print(i)");
-    // let initial_code = String::from("x = 5");
-    let mut buffer = LineTextBuffer::new(initial_code);
-    buffer.language = Language::Python;
-    let highlighted_text = buffer.highlight_complete_text();
-    // println!("{:#?}", buffer.tokens.unwrap());
-    println!("{:?}", highlighted_text);
-    assert!(true);
-}
-
-#[test]
 fn line_buffer_from_file_content() {
     let initial_code = "This\nis\na simple\nfile\n".into();
     let buffer = LineTextBuffer::new(initial_code);

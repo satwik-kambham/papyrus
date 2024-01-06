@@ -33,13 +33,13 @@ function clamp(value, min, max) {
 // Scroll wheel event handler
 function wheel_event(e) {
   hOffset.value = clamp(
-    hOffset.value - e.deltaX * 0.3,
+    hOffset.value - e.deltaX * 0.5,
     -e.currentTarget.clientWidth + e.currentTarget.parentNode.clientWidth,
     0
   );
 
   vOffset.value = clamp(
-    vOffset.value - e.deltaY * 0.3,
+    vOffset.value - e.deltaY * 0.5,
     -e.currentTarget.clientHeight + e.currentTarget.parentNode.clientHeight,
     0
   );
@@ -129,7 +129,6 @@ async function click_event(e) {
       column += child.textContent.length;
     });
 
-    console.log("Row: " + row + " Column: " + column);
     statusStore.cursorRow = row;
     statusStore.cursorColumn = column;
   } else if (textNode?.nodeType === 1) {
@@ -141,7 +140,6 @@ async function click_event(e) {
       // Setting column to end of line
       column = textNode.textContent.length;
 
-      console.log("Outside bounds -> Row: " + row + " Column: " + column);
       statusStore.cursorRow = row;
       statusStore.cursorColumn = column;
     }
@@ -329,7 +327,7 @@ async function key_event(e) {
 <template>
   <div
     ref="editorElement"
-    class="bg-atom-bg min-h-full font-code antialiased text-lg absolute min-w-full overflow-visible h-fit w-fit cursor-text"
+    class="bg-atom-bg min-h-full font-code antialiased text-xl absolute min-w-full overflow-visible h-fit w-fit cursor-text"
     @wheel="wheel_event"
     @mousedown="click_event"
     :style="{ top: vOffset + 'px', left: hOffset + 'px' }"
@@ -347,7 +345,7 @@ async function key_event(e) {
   </div>
   <div
     ref="cursorElement"
-    class="absolute font-code text-lg antialiased border-atom-primary border-l-2 pointer-events-none select-none animate-blink"
+    class="absolute font-code text-xl antialiased border-atom-primary border-l-2 pointer-events-none select-none animate-blink"
     :style="{
       top: vOffset + cursorVOffset + 'px',
       left: hOffset + cursorHOffset + 'px',
@@ -368,7 +366,7 @@ async function key_event(e) {
     />
   </div>
   <div
-    class="absolute invisible whitespace-pre text-lg text-atom-highlight-None text-atom-highlight-White text-atom-highlight-Red text-atom-highlight-Orange text-atom-highlight-Blue text-atom-highlight-Green text-atom-highlight-Purple text-atom-highlight-Yellow text-atom-highlight-Gray text-atom-highlight-Turquoise"
+    class="absolute invisible whitespace-pre text-xl text-atom-highlight-None text-atom-highlight-White text-atom-highlight-Red text-atom-highlight-Orange text-atom-highlight-Blue text-atom-highlight-Green text-atom-highlight-Purple text-atom-highlight-Yellow text-atom-highlight-Gray text-atom-highlight-Turquoise"
     ref="dummyElement"
   >
     <span>x</span>

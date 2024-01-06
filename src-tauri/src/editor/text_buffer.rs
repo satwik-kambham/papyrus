@@ -163,6 +163,7 @@ impl LineTextBuffer {
                             end_range = current_range.end_point.column;
                         }
                         let token_slice = &current_line[cursor.column..end_range];
+                        println!("{} - {}", token_slice, kind);
                         highlighted_line
                             .push((mapping.get_highlight_type(&kind), token_slice.to_string()));
                         cursor.column = end_range;
@@ -172,9 +173,10 @@ impl LineTextBuffer {
                             highlighted_text.text.push(highlighted_line);
                             highlighted_line = vec![];
                             current_line = lines_iter.next().unwrap();
+                        } else {
+                            // Go to next token
+                            current_token = tokens_iter.next();
                         }
-                        // Go to next token
-                        current_token = tokens_iter.next();
                     }
                 }
                 None => {

@@ -11,12 +11,10 @@ async function open_file() {
   const selected = await open();
   if (selected !== null) {
     // user selected a single file
-    console.log(selected);
     invoke("create_buffer_from_file_path", { path: selected })
       .then((success) => {
         statusStore.encoding = "utf8";
         editorStore.buffer_idx = 0;
-        console.log(success);
         invoke("get_highlighted_text").then((content) => {
           editorStore.content = content.text;
         });
