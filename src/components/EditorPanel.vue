@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, nextTick } from "vue";
 import { invoke } from "@tauri-apps/api";
 import { useEditorStore } from "../stores/editor";
 import { useStatusStore } from "../stores/status";
@@ -46,7 +46,8 @@ function wheel_event(e) {
 }
 
 // Set cursor position at given row and column
-function setCursorPosition(row, column) {
+async function setCursorPosition(row, column) {
+  await nextTick();
   let tempColumn = column;
   let tokens = editorElement.value.children[row].firstChild.children;
   let currentToken = null;
@@ -84,7 +85,7 @@ function setCursorPosition(row, column) {
 }
 
 // Mouse click event handler
-function click_event(e) {
+async function click_event(e) {
   e.preventDefault();
 
   let range;
@@ -146,7 +147,7 @@ function click_event(e) {
     }
   }
 
-  setCursorPosition(row, column);
+  await setCursorPosition(row, column);
 }
 
 // Insert character after cursor
@@ -159,15 +160,13 @@ async function insert_character(character) {
     },
   });
   editorStore.content = update[0].text;
-  setCursorPosition(update[1].row, update[1].column);
+  await setCursorPosition(update[1].row, update[1].column);
   statusStore.cursorRow = update[1].row;
   statusStore.cursorColumn = update[1].column;
 }
 
 // Remove character before cursor
 async function remove_character() {
-  let prev_row_length = await get_row_length(statusStore.cursorRow - 1);
-
   if (statusStore.cursorRow != 0 || statusStore.cursorColumn != 0) {
     let s;
     if (statusStore.cursorColumn != 0) {
@@ -182,6 +181,7 @@ async function remove_character() {
         },
       };
     } else {
+      let prev_row_length = await get_row_length(statusStore.cursorRow - 1);
       s = {
         start: {
           row: statusStore.cursorRow - 1,
@@ -198,7 +198,7 @@ async function remove_character() {
     });
     editorStore.content = update[0].text;
     let removed_text = update[1];
-    setCursorPosition(update[2].row, update[2].column);
+    await setCursorPosition(update[2].row, update[2].column);
     statusStore.cursorRow = update[2].row;
     statusStore.cursorColumn = update[2].column;
   }
@@ -227,7 +227,7 @@ async function move_cursor_up() {
       statusStore.cursorColumn,
       await get_row_length(statusStore.cursorRow - 1)
     );
-    setCursorPosition(statusStore.cursorRow - 1, column);
+    await setCursorPosition(statusStore.cursorRow - 1, column);
     statusStore.cursorRow -= 1;
     statusStore.cursorColumn = column;
   }
@@ -242,7 +242,7 @@ async function move_cursor_down() {
       statusStore.cursorColumn,
       await get_row_length(statusStore.cursorRow + 1)
     );
-    setCursorPosition(statusStore.cursorRow + 1, column);
+    await setCursorPosition(statusStore.cursorRow + 1, column);
     statusStore.cursorRow += 1;
     statusStore.cursorColumn = column;
   }
@@ -254,12 +254,15 @@ async function move_cursor_left() {
     // Move to end of previous line
     if (statusStore.cursorRow != 0) {
       let column = await get_row_length(statusStore.cursorRow - 1);
-      setCursorPosition(statusStore.cursorRow - 1, column);
+      await setCursorPosition(statusStore.cursorRow - 1, column);
       statusStore.cursorRow -= 1;
       statusStore.cursorColumn = column;
     }
   } else {
-    setCursorPosition(statusStore.cursorRow, statusStore.cursorColumn - 1);
+    await setCursorPosition(
+      statusStore.cursorRow,
+      statusStore.cursorColumn - 1
+    );
     statusStore.cursorColumn -= 1;
   }
 }
@@ -272,26 +275,29 @@ async function move_cursor_right() {
     // Move to start of next line
     if (statusStore.cursorRow != (await get_lines_length()) - 1) {
       let column = 0;
-      setCursorPosition(statusStore.cursorRow + 1, column);
+      await setCursorPosition(statusStore.cursorRow + 1, column);
       statusStore.cursorRow += 1;
       statusStore.cursorColumn = column;
     }
   } else {
-    setCursorPosition(statusStore.cursorRow, statusStore.cursorColumn + 1);
+    await setCursorPosition(
+      statusStore.cursorRow,
+      statusStore.cursorColumn + 1
+    );
     statusStore.cursorColumn += 1;
   }
 }
 
 // Move cursor to start of line
 async function move_cursor_line_start() {
-  setCursorPosition(statusStore.cursorRow, 0);
+  await setCursorPosition(statusStore.cursorRow, 0);
   statusStore.cursorColumn = 0;
 }
 
 // Move cursor to end of line
 async function move_cursor_line_end() {
   let column = await get_row_length(statusStore.cursorRow);
-  setCursorPosition(statusStore.cursorRow, column);
+  await setCursorPosition(statusStore.cursorRow, column);
   statusStore.cursorColumn = column;
 }
 
