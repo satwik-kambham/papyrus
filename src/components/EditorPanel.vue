@@ -135,7 +135,7 @@ async function setCursorPosition(row, column) {
   }
   currentLine.value = editorElement.value.children[row];
 
-  selectionHighlights.value = [];
+  let highlights = [];
   if (selection_made()) {
     let start = {
       row: statusStore.startCursorRow,
@@ -156,7 +156,7 @@ async function setCursorPosition(row, column) {
     const endOffsets = await calculateOffsets(end.row, end.column);
 
     if (start.row == end.row) {
-      selectionHighlights.value.push({
+      highlights.push({
         vOffset: startOffsets[0],
         startHOffset: startOffsets[1],
         endHOffset: endOffsets[1],
@@ -166,7 +166,7 @@ async function setCursorPosition(row, column) {
         start.row,
         await get_row_length(start.row)
       );
-      selectionHighlights.value.push({
+      highlights.push({
         vOffset: startOffsets[0],
         startHOffset: startOffsets[1],
         endHOffset: offsets[1],
@@ -174,19 +174,20 @@ async function setCursorPosition(row, column) {
       for (let i = start.row + 1; i < end.row; i++) {
         let startHOffset = (await calculateOffsets(i, 0))[1];
         offsets = await calculateOffsets(i, await get_row_length(i));
-        selectionHighlights.value.push({
+        highlights.push({
           vOffset: offsets[0],
           startHOffset: startHOffset,
           endHOffset: offsets[1],
         });
       }
       offsets = await calculateOffsets(end.row, 0);
-      selectionHighlights.value.push({
+      highlights.push({
         vOffset: endOffsets[0],
         startHOffset: offsets[1],
         endHOffset: endOffsets[1],
       });
     }
+    selectionHighlights.value = highlights;
   } else {
     currentLine.value.classList.add("bg-atom-bg-light");
   }
