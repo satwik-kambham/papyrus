@@ -188,7 +188,6 @@ impl LineTextBuffer {
                             end_range = current_range.end_point.column;
                         }
                         let token_slice = &current_line[cursor.column..end_range];
-                        println!("{} - {}", token_slice, kind);
                         highlighted_line
                             .push((mapping.get_highlight_type(&kind), token_slice.to_string()));
                         cursor.column = end_range;

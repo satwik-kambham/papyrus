@@ -25,6 +25,41 @@ const cursorHeight = computed(() => {
   return dummyElement.value?.offsetHeight;
 });
 
+class AsyncQueue {
+  constructor() {
+    this.queue = [];
+    this.running = false;
+  }
+
+  enqueue(asyncFunction) {
+    return new Promise((resolve, reject) => {
+      this.queue.push({ asyncFunction, resolve, reject });
+      this.run();
+    });
+  }
+
+  async run() {
+    if (this.running) return;
+
+    this.running = true;
+
+    while (this.queue.length > 0) {
+      const { asyncFunction, resolve, reject } = this.queue.shift();
+
+      try {
+        const result = await asyncFunction();
+        resolve(result);
+      } catch (error) {
+        reject(error);
+      }
+    }
+
+    this.running = false;
+  }
+}
+
+const asyncQueue = new AsyncQueue();
+
 // Clamp value to the range from min to max
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
@@ -88,64 +123,66 @@ async function setCursorPosition(row, column) {
 async function click_event(e) {
   e.preventDefault();
 
-  let range;
-  let textNode;
-  let offset;
-  let boundingRect;
-  let row = 0;
-  let column = 0;
+  await asyncQueue.enqueue(async () => {
+    let range;
+    let textNode;
+    let offset;
+    let boundingRect;
+    let row = 0;
+    let column = 0;
 
-  // Try to find text node and exact position in the text node where the user clicked
-  if (document.caretPositionFromPoint) {
-    range = document.caretPositionFromPoint(e.clientX, e.clientY);
-    textNode = range.offsetNode;
-    offset = range.offset;
-    boundingRect = range.getBoundingClientRect();
-  } else if (document.caretRangeFromPoint) {
-    // Use WebKit-proprietary fallback method
-    range = document.caretRangeFromPoint(e.clientX, e.clientY);
-    textNode = range?.startContainer;
-    offset = range?.startOffset;
-    boundingRect = range?.getBoundingClientRect();
-  } else {
-    console.error("Cannot handle click as caret APIs not supported");
-    return;
-  }
+    // Try to find text node and exact position in the text node where the user clicked
+    if (document.caretPositionFromPoint) {
+      range = document.caretPositionFromPoint(e.clientX, e.clientY);
+      textNode = range.offsetNode;
+      offset = range.offset;
+      boundingRect = range.getBoundingClientRect();
+    } else if (document.caretRangeFromPoint) {
+      // Use WebKit-proprietary fallback method
+      range = document.caretRangeFromPoint(e.clientX, e.clientY);
+      textNode = range?.startContainer;
+      offset = range?.startOffset;
+      boundingRect = range?.getBoundingClientRect();
+    } else {
+      console.error("Cannot handle click as caret APIs not supported");
+      return;
+    }
 
-  if (textNode?.nodeType === 3) {
-    // If user clicked on text
-    // Calculating row and column
-    row = Math.floor(
-      e.target.parentNode.offsetTop / e.target.parentNode.clientHeight
-    );
+    if (textNode?.nodeType === 3) {
+      // If user clicked on text
+      // Calculating row and column
+      row = Math.floor(
+        e.target.parentNode.offsetTop / e.target.parentNode.clientHeight
+      );
 
-    let children = Array.from(
-      editorElement.value.children[row].firstChild.children
-    );
-    let current = children.indexOf(textNode.parentNode);
-    column = offset;
+      let children = Array.from(
+        editorElement.value.children[row].firstChild.children
+      );
+      let current = children.indexOf(textNode.parentNode);
+      column = offset;
 
-    children.slice(0, current).forEach((child) => {
-      column += child.textContent.length;
-    });
-
-    statusStore.cursorRow = row;
-    statusStore.cursorColumn = column;
-  } else if (textNode?.nodeType === 1) {
-    // If user clicked outside the text
-    // Calculating row
-    row = Math.floor(e.target.offsetTop / e.target.clientHeight);
-    if (offset != 0) {
-      // If user did not click on the outer editor div
-      // Setting column to end of line
-      column = textNode.textContent.length;
+      children.slice(0, current).forEach((child) => {
+        column += child.textContent.length;
+      });
 
       statusStore.cursorRow = row;
       statusStore.cursorColumn = column;
-    }
-  }
+    } else if (textNode?.nodeType === 1) {
+      // If user clicked outside the text
+      // Calculating row
+      row = Math.floor(e.target.offsetTop / e.target.clientHeight);
+      if (offset != 0) {
+        // If user did not click on the outer editor div
+        // Setting column to end of line
+        column = textNode.textContent.length;
 
-  await setCursorPosition(row, column);
+        statusStore.cursorRow = row;
+        statusStore.cursorColumn = column;
+      }
+    }
+
+    await setCursorPosition(row, column);
+  });
 }
 
 // Insert character after cursor
@@ -303,25 +340,27 @@ async function move_cursor_line_end() {
 async function key_event(e) {
   e.preventDefault();
 
-  if (e.key.length == 1 || e.key === "Enter") {
-    let key = e.key;
-    if (key === "Enter") key = "\n";
-    await insert_character(key);
-  } else if (e.key === "Backspace") {
-    await remove_character();
-  } else if (e.key === "ArrowUp") {
-    await move_cursor_up();
-  } else if (e.key === "ArrowLeft") {
-    await move_cursor_left();
-  } else if (e.key === "ArrowDown") {
-    await move_cursor_down();
-  } else if (e.key === "ArrowRight") {
-    await move_cursor_right();
-  } else if (e.key === "Home") {
-    await move_cursor_line_start();
-  } else if (e.key === "End") {
-    await move_cursor_line_end();
-  }
+  await asyncQueue.enqueue(async () => {
+    if (e.key.length == 1 || e.key === "Enter") {
+      let key = e.key;
+      if (key === "Enter") key = "\n";
+      await insert_character(key);
+    } else if (e.key === "Backspace") {
+      await remove_character();
+    } else if (e.key === "ArrowUp") {
+      await move_cursor_up();
+    } else if (e.key === "ArrowLeft") {
+      await move_cursor_left();
+    } else if (e.key === "ArrowDown") {
+      await move_cursor_down();
+    } else if (e.key === "ArrowRight") {
+      await move_cursor_right();
+    } else if (e.key === "Home") {
+      await move_cursor_line_start();
+    } else if (e.key === "End") {
+      await move_cursor_line_end();
+    }
+  });
 }
 </script>
 <template>
