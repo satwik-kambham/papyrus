@@ -5,11 +5,30 @@ use crate::EDITOR_STATE;
 
 #[tauri::command]
 pub fn create_buffer_from_file_path(path: String) -> Result<String, String> {
-    let buf = file_handling::read_file_content(path).map_err(|err| err.to_string())?;
+    let buf = file_handling::read_file_content(&path).map_err(|err| err.to_string())?;
 
     let mut editor_state = EDITOR_STATE.get().write().unwrap();
-    editor_state.text_buffer = LineTextBuffer::new(buf);
+    editor_state.text_buffer = LineTextBuffer::from_file(buf, path);
     editor_state.text_buffer.language = Language::Python;
+
+    Ok("Success".into())
+}
+
+#[tauri::command]
+pub fn save_buffer() -> Result<String, String> {
+    let editor_state = EDITOR_STATE.get().read().unwrap();
+    let content = editor_state.text_buffer.get_content();
+    let path = editor_state.text_buffer.file_path.as_ref().unwrap();
+    file_handling::override_file_content(path, content).map_err(|err| err.to_string())?;
+
+    Ok("Success".into())
+}
+
+#[tauri::command]
+pub fn save_buffer_to_new_file(path: String) -> Result<String, String> {
+    let editor_state = EDITOR_STATE.get().read().unwrap();
+    let content = editor_state.text_buffer.get_content();
+    file_handling::override_file_content(&path, content).map_err(|err| err.to_string())?;
 
     Ok("Success".into())
 }

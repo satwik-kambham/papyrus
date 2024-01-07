@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { open } from "@tauri-apps/api/dialog";
+import { open, save } from "@tauri-apps/api/dialog";
 import { invoke } from "@tauri-apps/api";
 import { useStatusStore } from "../stores/status";
 import { useEditorStore } from "../stores/editor";
@@ -25,10 +25,36 @@ async function open_file() {
       });
   }
 }
+
+async function save_current() {
+  invoke("save_buffer")
+    .then((success) => {
+      console.log("File saved successfully");
+    })
+    .catch((error) => {
+      console.error(error);
+    });
+}
+
+async function save_as() {
+  const selected = await save();
+  if (selected !== null) {
+    // user selected a single file
+    invoke("save_buffer_to_new_file", { path: selected })
+      .then((success) => {
+        console.log("File saved successfully");
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }
+}
 </script>
 
 <template>
   <div class="bg-atom-bg-dark p-1">
-    <button type="button" @click="open_file()">Open File</button>
+    <button class="pr-1" type="button" @click="open_file()">Open File</button>
+    <button class="px-1" type="button" @click="save_current()">Save</button>
+    <button class="px-1" type="button" @click="save_as()">Save as</button>
   </div>
 </template>

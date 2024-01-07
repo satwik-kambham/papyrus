@@ -1,4 +1,4 @@
-use crate::editor::text_buffer::{Cursor, Language, LineTextBuffer, Selection};
+use crate::editor::text_buffer::{Cursor, LineTextBuffer, Selection};
 
 #[test]
 fn line_buffer_from_file_content() {

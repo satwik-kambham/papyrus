@@ -21,6 +21,7 @@ pub enum Language {
 
 /// Basic text buffer implementation using lines
 pub struct LineTextBuffer {
+    pub file_path: Option<String>,
     pub lines: Vec<String>,
     pub syntax_tree: Option<tree_sitter::Tree>,
     pub language: Language,
@@ -37,11 +38,35 @@ impl LineTextBuffer {
         }
 
         Self {
+            file_path: None,
             lines,
             syntax_tree: None,
             language: Language::PlainText,
             tokens: None,
         }
+    }
+
+    /// Creates a new line based text buffer from the given initial text
+    /// with a linked file
+    pub fn from_file(initial_text: String, path: String) -> Self {
+        let mut lines: Vec<String> = initial_text.lines().map(String::from).collect();
+
+        if initial_text.ends_with("\n") && !initial_text.ends_with("\\n") {
+            lines.push("".into());
+        }
+
+        Self {
+            file_path: Some(path),
+            lines,
+            syntax_tree: None,
+            language: Language::PlainText,
+            tokens: None,
+        }
+    }
+
+    pub fn get_content(&self) -> String {
+        let content = self.lines.join("\n");
+        content
     }
 
     /// Highlights the entire text in plain text
