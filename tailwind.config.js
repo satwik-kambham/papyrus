@@ -14,6 +14,7 @@ export default {
           "bg-dark": "#21252b",
           "bg": "#282c34",
           "bg-light": "#2c313c",
+          "highlight": "#3e4451",
           "text": "#abb2bf",
           "text-dark": "#58727d",
           "primary": "#61afef",

@@ -16,6 +16,9 @@ const hOffset = ref(0);
 const vOffset = ref(0);
 const cursorHOffset = ref(0);
 const cursorVOffset = ref(0);
+const selectionHighlights = ref([]);
+
+let selecting = false;
 
 // Setting cursor width based on a dummy element
 const cursorWidth = computed(() => {
@@ -80,9 +83,15 @@ function wheel_event(e) {
   );
 }
 
-// Set cursor position at given row and column
-async function setCursorPosition(row, column) {
-  await nextTick();
+function selection_made() {
+  return (
+    statusStore.startCursorRow != statusStore.cursorRow ||
+    statusStore.startCursorColumn != statusStore.cursorColumn
+  );
+}
+
+// Calculate offsets given row and column
+async function calculateOffsets(row, column) {
   let tempColumn = column;
   let tokens = editorElement.value.children[row].firstChild.children;
   let currentToken = null;
@@ -100,89 +109,147 @@ async function setCursorPosition(row, column) {
     range.setStart(currentToken.firstChild, 0);
     range.setEnd(currentToken.firstChild, tempColumn);
 
-    cursorVOffset.value = editorElement.value.children[row].offsetTop;
-    cursorHOffset.value =
+    const verticalOffset = editorElement.value.children[row].offsetTop;
+    const horizontalOffset =
       range.getBoundingClientRect().right -
       cursorElement.value?.parentNode.offsetLeft -
       hOffset.value;
+    return [verticalOffset, horizontalOffset];
   } else {
-    cursorVOffset.value = editorElement.value.children[row].offsetTop;
-    cursorHOffset.value = 0;
+    const verticalOffset = editorElement.value.children[row].offsetTop;
+    const horizontalOffset = 0;
+    return [verticalOffset, horizontalOffset];
   }
+}
+
+// Set cursor position at given row and column
+async function setCursorPosition(row, column) {
+  await nextTick();
+
+  const cursorOffsets = await calculateOffsets(row, column);
+  cursorVOffset.value = cursorOffsets[0];
+  cursorHOffset.value = cursorOffsets[1];
 
   if (currentLine.value != null) {
     currentLine.value.classList.remove("bg-atom-bg-light");
   }
   currentLine.value = editorElement.value.children[row];
-  currentLine.value.classList.add("bg-atom-bg-light");
+
+  selectionHighlights.value = [];
+  if (selection_made()) {
+    let start = {
+      row: statusStore.startCursorRow,
+      column: statusStore.startCursorColumn,
+    };
+    let end = {
+      row: statusStore.cursorRow,
+      column: statusStore.cursorColumn,
+    };
+
+    if (!(start.row < end.row || start.column < end.column)) {
+      let buf = start;
+      start = end;
+      end = buf;
+    }
+
+    const startOffsets = await calculateOffsets(start.row, start.column);
+    const endOffsets = await calculateOffsets(end.row, end.column);
+
+    if (start.row == end.row) {
+      selectionHighlights.value.push({
+        vOffset: startOffsets[0],
+        startHOffset: startOffsets[1],
+        endHOffset: endOffsets[1],
+      });
+    } else {
+      let offsets = await calculateOffsets(
+        start.row,
+        await get_row_length(start.row)
+      );
+      selectionHighlights.value.push({
+        vOffset: startOffsets[0],
+        startHOffset: startOffsets[1],
+        endHOffset: offsets[1],
+      });
+      for (let i = start.row + 1; i < end.row; i++) {
+        let startHOffset = (await calculateOffsets(i, 0))[1];
+        offsets = await calculateOffsets(i, await get_row_length(i));
+        selectionHighlights.value.push({
+          vOffset: offsets[0],
+          startHOffset: startHOffset,
+          endHOffset: offsets[1],
+        });
+      }
+      offsets = await calculateOffsets(end.row, 0);
+      selectionHighlights.value.push({
+        vOffset: endOffsets[0],
+        startHOffset: offsets[1],
+        endHOffset: endOffsets[1],
+      });
+    }
+  } else {
+    currentLine.value.classList.add("bg-atom-bg-light");
+  }
 
   hiddenInput.value?.focus();
 }
 
-// Mouse click event handler
-async function click_event(e) {
-  e.preventDefault();
+function get_mouse_position(e) {
+  let range;
+  let textNode;
+  let offset;
+  let row = 0;
+  let column = 0;
 
-  await asyncQueue.enqueue(async () => {
-    let range;
-    let textNode;
-    let offset;
-    let boundingRect;
-    let row = 0;
-    let column = 0;
+  // Try to find text node and exact position in the text node where the user clicked
+  if (document.caretPositionFromPoint) {
+    range = document.caretPositionFromPoint(e.clientX, e.clientY);
+    textNode = range.offsetNode;
+    offset = range.offset;
+  } else if (document.caretRangeFromPoint) {
+    // Use WebKit-proprietary fallback method
+    range = document.caretRangeFromPoint(e.clientX, e.clientY);
+    textNode = range?.startContainer;
+    offset = range?.startOffset;
+  } else {
+    console.error("Cannot handle click as caret APIs not supported");
+    return {
+      row: row,
+      column: column,
+    };
+  }
 
-    // Try to find text node and exact position in the text node where the user clicked
-    if (document.caretPositionFromPoint) {
-      range = document.caretPositionFromPoint(e.clientX, e.clientY);
-      textNode = range.offsetNode;
-      offset = range.offset;
-      boundingRect = range.getBoundingClientRect();
-    } else if (document.caretRangeFromPoint) {
-      // Use WebKit-proprietary fallback method
-      range = document.caretRangeFromPoint(e.clientX, e.clientY);
-      textNode = range?.startContainer;
-      offset = range?.startOffset;
-      boundingRect = range?.getBoundingClientRect();
-    } else {
-      console.error("Cannot handle click as caret APIs not supported");
-      return;
+  if (textNode?.nodeType === 3) {
+    // If user clicked on text
+    // Calculating row and column
+    row = Math.floor(
+      e.target.parentNode.offsetTop / e.target.parentNode.clientHeight
+    );
+
+    let children = Array.from(
+      editorElement.value.children[row].firstChild.children
+    );
+    let current = children.indexOf(textNode.parentNode);
+    column = offset;
+
+    children.slice(0, current).forEach((child) => {
+      column += child.textContent.length;
+    });
+  } else if (textNode?.nodeType === 1) {
+    // If user clicked outside the text
+    // Calculating row
+    row = Math.floor(e.target.offsetTop / e.target.clientHeight);
+    if (offset != 0) {
+      // If user did not click on the outer editor div
+      // Setting column to end of line
+      column = textNode.textContent.length;
     }
+  }
 
-    if (textNode?.nodeType === 3) {
-      // If user clicked on text
-      // Calculating row and column
-      row = Math.floor(
-        e.target.parentNode.offsetTop / e.target.parentNode.clientHeight
-      );
-
-      let children = Array.from(
-        editorElement.value.children[row].firstChild.children
-      );
-      let current = children.indexOf(textNode.parentNode);
-      column = offset;
-
-      children.slice(0, current).forEach((child) => {
-        column += child.textContent.length;
-      });
-
-      statusStore.cursorRow = row;
-      statusStore.cursorColumn = column;
-    } else if (textNode?.nodeType === 1) {
-      // If user clicked outside the text
-      // Calculating row
-      row = Math.floor(e.target.offsetTop / e.target.clientHeight);
-      if (offset != 0) {
-        // If user did not click on the outer editor div
-        // Setting column to end of line
-        column = textNode.textContent.length;
-
-        statusStore.cursorRow = row;
-        statusStore.cursorColumn = column;
-      }
-    }
-
-    await setCursorPosition(row, column);
-  });
+  return {
+    row: row,
+    column: column,
+  };
 }
 
 // Insert character after cursor
@@ -195,9 +262,9 @@ async function insert_character(character) {
     },
   });
   editorStore.content = update[0].text;
-  await setCursorPosition(update[1].row, update[1].column);
   statusStore.cursorRow = update[1].row;
   statusStore.cursorColumn = update[1].column;
+  await setCursorPosition(update[1].row, update[1].column);
 }
 
 // Remove character before cursor
@@ -233,9 +300,9 @@ async function remove_character() {
     });
     editorStore.content = update[0].text;
     let removed_text = update[1];
-    await setCursorPosition(update[2].row, update[2].column);
     statusStore.cursorRow = update[2].row;
     statusStore.cursorColumn = update[2].column;
+    await setCursorPosition(update[2].row, update[2].column);
   }
 }
 
@@ -262,9 +329,9 @@ async function move_cursor_up() {
       statusStore.cursorColumn,
       await get_row_length(statusStore.cursorRow - 1)
     );
-    await setCursorPosition(statusStore.cursorRow - 1, column);
     statusStore.cursorRow -= 1;
     statusStore.cursorColumn = column;
+    await setCursorPosition(statusStore.cursorRow - 1, column);
   }
 }
 
@@ -277,9 +344,9 @@ async function move_cursor_down() {
       statusStore.cursorColumn,
       await get_row_length(statusStore.cursorRow + 1)
     );
-    await setCursorPosition(statusStore.cursorRow + 1, column);
     statusStore.cursorRow += 1;
     statusStore.cursorColumn = column;
+    await setCursorPosition(statusStore.cursorRow + 1, column);
   }
 }
 
@@ -289,16 +356,16 @@ async function move_cursor_left() {
     // Move to end of previous line
     if (statusStore.cursorRow != 0) {
       let column = await get_row_length(statusStore.cursorRow - 1);
-      await setCursorPosition(statusStore.cursorRow - 1, column);
       statusStore.cursorRow -= 1;
       statusStore.cursorColumn = column;
+      await setCursorPosition(statusStore.cursorRow - 1, column);
     }
   } else {
+    statusStore.cursorColumn -= 1;
     await setCursorPosition(
       statusStore.cursorRow,
       statusStore.cursorColumn - 1
     );
-    statusStore.cursorColumn -= 1;
   }
 }
 
@@ -310,30 +377,75 @@ async function move_cursor_right() {
     // Move to start of next line
     if (statusStore.cursorRow != (await get_lines_length()) - 1) {
       let column = 0;
-      await setCursorPosition(statusStore.cursorRow + 1, column);
       statusStore.cursorRow += 1;
       statusStore.cursorColumn = column;
+      await setCursorPosition(statusStore.cursorRow + 1, column);
     }
   } else {
+    statusStore.cursorColumn += 1;
     await setCursorPosition(
       statusStore.cursorRow,
       statusStore.cursorColumn + 1
     );
-    statusStore.cursorColumn += 1;
   }
 }
 
 // Move cursor to start of line
 async function move_cursor_line_start() {
-  await setCursorPosition(statusStore.cursorRow, 0);
   statusStore.cursorColumn = 0;
+  await setCursorPosition(statusStore.cursorRow, 0);
 }
 
 // Move cursor to end of line
 async function move_cursor_line_end() {
   let column = await get_row_length(statusStore.cursorRow);
-  await setCursorPosition(statusStore.cursorRow, column);
   statusStore.cursorColumn = column;
+  await setCursorPosition(statusStore.cursorRow, column);
+}
+
+// Mouse click event handler
+async function mouse_down(e) {
+  e.preventDefault();
+  selecting = true;
+
+  await asyncQueue.enqueue(async () => {
+    let position = get_mouse_position(e);
+
+    await setCursorPosition(position.row, position.column);
+    statusStore.startCursorRow = position.row;
+    statusStore.startCursorColumn = position.column;
+    statusStore.cursorRow = position.row;
+    statusStore.cursorColumn = position.column;
+  });
+}
+
+// Mouse click event handler
+async function mouse_move(e) {
+  e.preventDefault();
+
+  if (selecting) {
+    await asyncQueue.enqueue(async () => {
+      let position = get_mouse_position(e);
+
+      statusStore.cursorRow = position.row;
+      statusStore.cursorColumn = position.column;
+      await setCursorPosition(position.row, position.column);
+    });
+  }
+}
+
+// Mouse click event handler
+async function mouse_up(e) {
+  e.preventDefault();
+  selecting = false;
+
+  await asyncQueue.enqueue(async () => {
+    let position = get_mouse_position(e);
+
+    statusStore.cursorRow = position.row;
+    statusStore.cursorColumn = position.column;
+    await setCursorPosition(position.row, position.column);
+  });
 }
 
 // Keyboard event handler
@@ -366,9 +478,11 @@ async function key_event(e) {
 <template>
   <div
     ref="editorElement"
-    class="bg-atom-bg min-h-full font-code antialiased text-xl absolute min-w-full overflow-visible h-fit w-fit cursor-text"
+    class="bg-transparent min-h-full font-code antialiased text-xl absolute min-w-full overflow-visible h-fit w-fit cursor-text z-10"
     @wheel="wheel_event"
-    @mousedown="click_event"
+    @mousedown="mouse_down"
+    @mousemove="mouse_move"
+    @mouseup="mouse_up"
     :style="{ top: vOffset + 'px', left: hOffset + 'px' }"
   >
     <div class="" v-for="line in editorStore.content">
@@ -384,7 +498,7 @@ async function key_event(e) {
   </div>
   <div
     ref="cursorElement"
-    class="absolute font-code text-xl antialiased border-atom-primary border-l-2 pointer-events-none select-none animate-blink"
+    class="absolute font-code text-xl antialiased border-atom-primary border-l-2 pointer-events-none select-none animate-blink z-20"
     :style="{
       top: vOffset + cursorVOffset + 'px',
       left: hOffset + cursorHOffset + 'px',
@@ -403,6 +517,21 @@ async function key_event(e) {
         height: cursorHeight + 'px',
       }"
     />
+  </div>
+  <div
+    ref="highlightElement"
+    class="absolute font-code text-xl antialiased pointer-events-none select-none h-full w-full bg-atom-bg"
+  >
+    <div
+      class="absolute bg-atom-highlight z-0"
+      :style="{
+        top: vOffset + highlight.vOffset + 'px',
+        left: hOffset + highlight.startHOffset + 'px',
+        width: highlight.endHOffset - highlight.startHOffset + 'px',
+        height: cursorHeight + 'px',
+      }"
+      v-for="highlight in selectionHighlights"
+    ></div>
   </div>
   <div
     class="absolute invisible whitespace-pre text-xl text-atom-highlight-None text-atom-highlight-White text-atom-highlight-Red text-atom-highlight-Orange text-atom-highlight-Blue text-atom-highlight-Green text-atom-highlight-Purple text-atom-highlight-Yellow text-atom-highlight-Gray text-atom-highlight-Turquoise"
