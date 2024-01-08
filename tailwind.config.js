@@ -17,6 +17,7 @@ export default {
           "highlight": "#3e4451",
           "text": "#abb2bf",
           "text-dark": "#58727d",
+          "text-light": "#4b5364",
           "primary": "#61afef",
           "highlight-None": "#abb2bf",
           "highlight-White": "#abb2bf",
