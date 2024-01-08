@@ -19,6 +19,7 @@ fn main() {
 
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
+            commands::get_folder_content,
             commands::create_buffer_from_file_path,
             commands::get_highlighted_text,
             commands::insert_text,

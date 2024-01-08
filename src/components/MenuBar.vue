@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { open, save } from "@tauri-apps/api/dialog";
 import { invoke } from "@tauri-apps/api";
+import { useWorkspaceStore } from "../stores/workspace";
 import { useStatusStore } from "../stores/status";
 import { useEditorStore } from "../stores/editor";
 
+const workspaceStore = useWorkspaceStore();
 const editorStore = useEditorStore();
 const statusStore = useStatusStore();
 
 async function open_file() {
-  const selected = await open();
+  const selected = await open({
+    multiple: false,
+  });
   if (selected !== null) {
     // user selected a single file
     invoke("create_buffer_from_file_path", { path: selected })
@@ -21,6 +25,26 @@ async function open_file() {
       })
       .catch((error) => {
         statusStore.encoding = "Unknown";
+        console.error(error);
+      });
+  }
+}
+
+async function open_folder() {
+  const selected = await open({
+    directory: true,
+    multiple: false,
+    recursive: true,
+  });
+  if (selected !== null) {
+    // user selected a single folder
+    invoke("get_folder_content", { path: selected })
+      .then((entries) => {
+        console.log(entries);
+        workspaceStore.folder = selected;
+        workspaceStore.entries = entries;
+      })
+      .catch((error) => {
         console.error(error);
       });
   }
@@ -54,6 +78,9 @@ async function save_as() {
 <template>
   <div class="bg-atom-bg-dark p-1">
     <button class="pr-1" type="button" @click="open_file()">Open File</button>
+    <button class="pr-1" type="button" @click="open_folder()">
+      Open Folder
+    </button>
     <button class="px-1" type="button" @click="save_current()">Save</button>
     <button class="px-1" type="button" @click="save_as()">Save as</button>
   </div>

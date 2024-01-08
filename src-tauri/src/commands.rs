@@ -4,6 +4,13 @@ use crate::editor_io::file_handling;
 use crate::EDITOR_STATE;
 
 #[tauri::command]
+pub fn get_folder_content(path: String) -> Result<Vec<file_handling::FolderEntry>, String> {
+    let entries = file_handling::get_folder_content(&path).map_err(|err| err.to_string())?;
+
+    Ok(entries)
+}
+
+#[tauri::command]
 pub fn create_buffer_from_file_path(path: String) -> Result<String, String> {
     let buf = file_handling::read_file_content(&path).map_err(|err| err.to_string())?;
 
