@@ -187,10 +187,10 @@ async function setCursorPosition(row, column) {
         endHOffset: endOffsets[1],
       });
     }
-    selectionHighlights.value = highlights;
   } else {
     currentLine.value.classList.add("bg-atom-bg-light");
   }
+  selectionHighlights.value = highlights;
 
   hiddenInput.value?.focus();
 }
@@ -255,6 +255,9 @@ function get_mouse_position(e) {
 
 // Insert character after cursor
 async function insert_character(character) {
+  if (selection_made()) {
+    await remove_character();
+  }
   let update = await invoke("insert_text", {
     text: character,
     cursor: {
@@ -265,6 +268,8 @@ async function insert_character(character) {
   editorStore.content = update[0].text;
   statusStore.cursorRow = update[1].row;
   statusStore.cursorColumn = update[1].column;
+  statusStore.startCursorRow = update[1].row;
+  statusStore.startCursorColumn = update[1].column;
   await setCursorPosition(update[1].row, update[1].column);
 }
 
@@ -272,29 +277,50 @@ async function insert_character(character) {
 async function remove_character() {
   if (statusStore.cursorRow != 0 || statusStore.cursorColumn != 0) {
     let s;
-    if (statusStore.cursorColumn != 0) {
+    if (selection_made()) {
+      let start = {
+        row: statusStore.startCursorRow,
+        column: statusStore.startCursorColumn,
+      };
+      let end = {
+        row: statusStore.cursorRow,
+        column: statusStore.cursorColumn,
+      };
+
+      if (!(start.row < end.row || start.column < end.column)) {
+        let buf = start;
+        start = end;
+        end = buf;
+      }
       s = {
-        start: {
-          row: statusStore.cursorRow,
-          column: statusStore.cursorColumn - 1,
-        },
-        end: {
-          row: statusStore.cursorRow,
-          column: statusStore.cursorColumn,
-        },
+        start: start,
+        end: end,
       };
     } else {
-      let prev_row_length = await get_row_length(statusStore.cursorRow - 1);
-      s = {
-        start: {
-          row: statusStore.cursorRow - 1,
-          column: prev_row_length,
-        },
-        end: {
-          row: statusStore.cursorRow,
-          column: 0,
-        },
-      };
+      if (statusStore.cursorColumn != 0) {
+        s = {
+          start: {
+            row: statusStore.cursorRow,
+            column: statusStore.cursorColumn - 1,
+          },
+          end: {
+            row: statusStore.cursorRow,
+            column: statusStore.cursorColumn,
+          },
+        };
+      } else {
+        let prev_row_length = await get_row_length(statusStore.cursorRow - 1);
+        s = {
+          start: {
+            row: statusStore.cursorRow - 1,
+            column: prev_row_length,
+          },
+          end: {
+            row: statusStore.cursorRow,
+            column: 0,
+          },
+        };
+      }
     }
     let update = await invoke("remove_text", {
       selection: s,
@@ -303,6 +329,8 @@ async function remove_character() {
     let removed_text = update[1];
     statusStore.cursorRow = update[2].row;
     statusStore.cursorColumn = update[2].column;
+    statusStore.startCursorRow = update[2].row;
+    statusStore.startCursorColumn = update[2].column;
     await setCursorPosition(update[2].row, update[2].column);
   }
 }
@@ -326,13 +354,15 @@ async function move_cursor_up() {
   if (statusStore.cursorRow == 0) {
     await move_cursor_line_start();
   } else {
+    statusStore.cursorRow -= 1;
     let column = Math.min(
       statusStore.cursorColumn,
-      await get_row_length(statusStore.cursorRow - 1)
+      await get_row_length(statusStore.cursorRow)
     );
-    statusStore.cursorRow -= 1;
     statusStore.cursorColumn = column;
-    await setCursorPosition(statusStore.cursorRow - 1, column);
+    statusStore.startCursorRow = statusStore.cursorRow;
+    statusStore.startCursorColumn = column;
+    await setCursorPosition(statusStore.cursorRow, column);
   }
 }
 
@@ -341,59 +371,74 @@ async function move_cursor_down() {
   if (statusStore.cursorRow == (await get_lines_length()) - 1) {
     await move_cursor_line_end();
   } else {
+    statusStore.cursorRow += 1;
     let column = Math.min(
       statusStore.cursorColumn,
-      await get_row_length(statusStore.cursorRow + 1)
+      await get_row_length(statusStore.cursorRow)
     );
-    statusStore.cursorRow += 1;
     statusStore.cursorColumn = column;
-    await setCursorPosition(statusStore.cursorRow + 1, column);
+    statusStore.startCursorRow = statusStore.cursorRow;
+    statusStore.startCursorColumn = column;
+    await setCursorPosition(statusStore.cursorRow, column);
   }
 }
 
 // Move cursor left
 async function move_cursor_left() {
-  if (statusStore.cursorColumn == 0) {
-    // Move to end of previous line
-    if (statusStore.cursorRow != 0) {
-      let column = await get_row_length(statusStore.cursorRow - 1);
-      statusStore.cursorRow -= 1;
-      statusStore.cursorColumn = column;
-      await setCursorPosition(statusStore.cursorRow - 1, column);
-    }
+  if (selection_made()) {
+    statusStore.startCursorRow = statusStore.cursorRow;
+    statusStore.startCursorColumn = statusStore.cursorColumn;
+    await setCursorPosition(statusStore.cursorRow, statusStore.cursorColumn);
   } else {
-    statusStore.cursorColumn -= 1;
-    await setCursorPosition(
-      statusStore.cursorRow,
-      statusStore.cursorColumn - 1
-    );
+    if (statusStore.cursorColumn == 0) {
+      // Move to end of previous line
+      if (statusStore.cursorRow != 0) {
+        statusStore.cursorRow -= 1;
+        let column = await get_row_length(statusStore.cursorRow);
+        statusStore.cursorColumn = column;
+        statusStore.startCursorRow = statusStore.cursorRow;
+        statusStore.startCursorColumn = column;
+        await setCursorPosition(statusStore.cursorRow, column);
+      }
+    } else {
+      statusStore.cursorColumn -= 1;
+      statusStore.startCursorColumn = statusStore.cursorColumn;
+      await setCursorPosition(statusStore.cursorRow, statusStore.cursorColumn);
+    }
   }
 }
 
 // Move cursor right
 async function move_cursor_right() {
-  if (
-    statusStore.cursorColumn == (await get_row_length(statusStore.cursorRow))
-  ) {
-    // Move to start of next line
-    if (statusStore.cursorRow != (await get_lines_length()) - 1) {
-      let column = 0;
-      statusStore.cursorRow += 1;
-      statusStore.cursorColumn = column;
-      await setCursorPosition(statusStore.cursorRow + 1, column);
-    }
+  if (selection_made()) {
+    statusStore.startCursorRow = statusStore.cursorRow;
+    statusStore.startCursorColumn = statusStore.cursorColumn;
+    await setCursorPosition(statusStore.cursorRow, statusStore.cursorColumn);
   } else {
-    statusStore.cursorColumn += 1;
-    await setCursorPosition(
-      statusStore.cursorRow,
-      statusStore.cursorColumn + 1
-    );
+    if (
+      statusStore.cursorColumn == (await get_row_length(statusStore.cursorRow))
+    ) {
+      // Move to start of next line
+      if (statusStore.cursorRow != (await get_lines_length()) - 1) {
+        let column = 0;
+        statusStore.cursorRow += 1;
+        statusStore.cursorColumn = column;
+        statusStore.startCursorRow = statusStore.cursorRow;
+        statusStore.startCursorColumn = column;
+        await setCursorPosition(statusStore.cursorRow, column);
+      }
+    } else {
+      statusStore.cursorColumn += 1;
+      statusStore.startCursorColumn = statusStore.cursorColumn;
+      await setCursorPosition(statusStore.cursorRow, statusStore.cursorColumn);
+    }
   }
 }
 
 // Move cursor to start of line
 async function move_cursor_line_start() {
   statusStore.cursorColumn = 0;
+  statusStore.startCursorColumn = 0;
   await setCursorPosition(statusStore.cursorRow, 0);
 }
 
@@ -401,6 +446,7 @@ async function move_cursor_line_start() {
 async function move_cursor_line_end() {
   let column = await get_row_length(statusStore.cursorRow);
   statusStore.cursorColumn = column;
+  statusStore.startCursorColumn = column;
   await setCursorPosition(statusStore.cursorRow, column);
 }
 
@@ -412,11 +458,11 @@ async function mouse_down(e) {
   await asyncQueue.enqueue(async () => {
     let position = get_mouse_position(e);
 
-    await setCursorPosition(position.row, position.column);
     statusStore.startCursorRow = position.row;
     statusStore.startCursorColumn = position.column;
     statusStore.cursorRow = position.row;
     statusStore.cursorColumn = position.column;
+    await setCursorPosition(position.row, position.column);
   });
 }
 
