@@ -157,7 +157,10 @@ async function setCursorPosition(row, column) {
       column: statusStore.cursorColumn,
     };
 
-    if (!(start.row < end.row || start.column < end.column)) {
+    if (
+      start.row > end.row ||
+      (start.row == end.row && start.column > end.column)
+    ) {
       let buf = start;
       start = end;
       end = buf;
@@ -300,11 +303,15 @@ async function remove_character() {
         column: statusStore.cursorColumn,
       };
 
-      if (!(start.row < end.row || start.column < end.column)) {
+      if (
+        start.row > end.row ||
+        (start.row == end.row && start.column > end.column)
+      ) {
         let buf = start;
         start = end;
         end = buf;
       }
+
       s = {
         start: start,
         end: end,
