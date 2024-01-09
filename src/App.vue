@@ -11,7 +11,7 @@ import StatusBar from "./components/StatusBar.vue";
       <MenuBar />
     </div>
     <div class="flex flex-1 overflow-auto">
-      <div class="w-1/6 overflow-auto h-full">
+      <div class="w-1/6 overflow-auto h-full custom-scrollbar">
         <SidePanel />
       </div>
       <div class="flex-1 overflow-hidden">
