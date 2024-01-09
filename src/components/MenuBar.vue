@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { open, save } from "@tauri-apps/api/dialog";
-import { invoke } from "@tauri-apps/api";
+import { app, invoke } from "@tauri-apps/api";
 import { useWorkspaceStore } from "../stores/workspace";
 import { useStatusStore } from "../stores/status";
 import { useEditorStore } from "../stores/editor";
+import { appWindow } from "@tauri-apps/api/window";
 
 const workspaceStore = useWorkspaceStore();
 const editorStore = useEditorStore();
@@ -73,15 +74,30 @@ async function save_as() {
       });
   }
 }
+
+async function minimize() {
+  await appWindow.minimize();
+}
+
+async function maximize() {
+  await appWindow.toggleMaximize();
+  workspaceStore.maximized = await appWindow.isMaximized();
+}
+
+async function quit() {
+  await appWindow.close();
+}
 </script>
 
 <template>
-  <div class="bg-atom-bg-dark p-1">
-    <button class="pr-1" type="button" @click="open_file()">Open File</button>
-    <button class="pr-1" type="button" @click="open_folder()">
-      Open Folder
-    </button>
-    <button class="px-1" type="button" @click="save_current()">Save</button>
-    <button class="px-1" type="button" @click="save_as()">Save as</button>
+  <div data-tauri-drag-region class="bg-atom-bg-dark p-1 flex">
+    <div class="pr-1 cursor-pointer" @click="open_file()">Open File</div>
+    <div class="pr-1 cursor-pointer" @click="open_folder()">Open Folder</div>
+    <div class="px-1 cursor-pointer" @click="save_current()">Save</div>
+    <div class="px-1 cursor-pointer" @click="save_as()">Save as</div>
+    <div data-tauri-drag-region class="flex-1"></div>
+    <div class="px-1 cursor-pointer" @click="minimize()">Minimize</div>
+    <div class="px-1 cursor-pointer" @click="maximize()">Maximize</div>
+    <div class="px-1 cursor-pointer" @click="quit()">Quit</div>
   </div>
 </template>

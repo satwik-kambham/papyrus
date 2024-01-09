@@ -15,6 +15,9 @@
       "dialog": {
         "open": true,
         "save": true
+      },
+      "window": {
+        "all": true
       }
     },
     "bundle": {
@@ -62,7 +65,9 @@
         "height": 600,
         "resizable": true,
         "title": "papyrus",
-        "width": 800
+        "width": 800,
+        "decorations": false,
+        "transparent": true
       }
     ]
   }
