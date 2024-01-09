@@ -290,4 +290,31 @@ impl LineTextBuffer {
             (buf, selection.start)
         }
     }
+
+    /// Get text at selection
+    pub fn get_selected_text(&self, selection: Selection) -> String {
+        if selection.start.row == selection.end.row {
+            let current_line = self.lines[selection.start.row].clone();
+            let (first, _second) = current_line.split_at(selection.end.column);
+            let (_first, middle) = first.split_at(selection.start.column);
+            middle.to_owned()
+        } else {
+            let mut buf = String::new();
+
+            let current_line = self.lines[selection.end.row].clone();
+            let (first, _second) = current_line.split_at(selection.end.column);
+            buf.insert_str(0, first);
+
+            for _i in (selection.start.row + 1..selection.end.row).rev() {
+                buf.insert(0, '\n');
+                buf.insert_str(0, &current_line);
+            }
+
+            let current_line = self.lines[selection.start.row].clone();
+            let (_first, middle) = current_line.split_at(selection.start.column);
+            buf.insert(0, '\n');
+            buf.insert_str(0, middle);
+            buf
+        }
+    }
 }

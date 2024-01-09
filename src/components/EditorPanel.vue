@@ -3,6 +3,7 @@ import { computed, ref, nextTick, onUpdated } from "vue";
 import { invoke } from "@tauri-apps/api";
 import { useEditorStore } from "../stores/editor";
 import { useStatusStore } from "../stores/status";
+import { readText, writeText } from "@tauri-apps/api/clipboard";
 
 const statusStore = useStatusStore();
 const editorStore = useEditorStore();
@@ -352,7 +353,42 @@ async function remove_character() {
     statusStore.startCursorRow = update[2].row;
     statusStore.startCursorColumn = update[2].column;
     await setCursorPosition(update[2].row, update[2].column);
+    return removed_text;
   }
+}
+
+// Remove character before cursor
+async function get_selected_text() {
+  if (selection_made()) {
+    let start = {
+      row: statusStore.startCursorRow,
+      column: statusStore.startCursorColumn,
+    };
+    let end = {
+      row: statusStore.cursorRow,
+      column: statusStore.cursorColumn,
+    };
+
+    if (
+      start.row > end.row ||
+      (start.row == end.row && start.column > end.column)
+    ) {
+      let buf = start;
+      start = end;
+      end = buf;
+    }
+
+    let s = {
+      start: start,
+      end: end,
+    };
+
+    let selected_text = await invoke("get_selected_text", {
+      selection: s,
+    });
+    return selected_text;
+  }
+  return "";
 }
 
 // Get lines length (total rows)
@@ -520,7 +556,18 @@ async function key_event(e) {
   e.preventDefault();
 
   await asyncQueue.enqueue(async () => {
-    if (e.key.length == 1 || e.key === "Enter") {
+    if (e.ctrlKey) {
+      if (e.key === "c") {
+        let selected_text = await get_selected_text();
+        await writeText(selected_text);
+      } else if (e.key === "v") {
+        const t = await readText();
+        await insert_character(t);
+      } else if (e.key === "x") {
+        let removed_text = await remove_character();
+        await writeText(removed_text);
+      }
+    } else if (e.key.length == 1 || e.key === "Enter") {
       let key = e.key;
       if (key === "Enter") key = "\n";
       await insert_character(key);

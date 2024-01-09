@@ -28,6 +28,7 @@ fn main() {
             commands::get_lines_length,
             commands::save_buffer,
             commands::save_buffer_to_new_file,
+            commands::get_selected_text,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

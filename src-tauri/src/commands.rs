@@ -80,3 +80,10 @@ pub fn remove_text(selection: Selection) -> (highlight::HighlightedText, String,
         updated_cursor,
     )
 }
+
+#[tauri::command]
+pub fn get_selected_text(selection: Selection) -> String {
+    let editor_state = EDITOR_STATE.get().read().unwrap();
+    let selected_text = editor_state.text_buffer.get_selected_text(selection);
+    selected_text
+}
