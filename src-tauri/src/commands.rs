@@ -82,6 +82,30 @@ pub fn remove_text(selection: Selection) -> (highlight::HighlightedText, String,
 }
 
 #[tauri::command]
+pub fn undo() -> Option<(highlight::HighlightedText, Cursor)> {
+    let mut editor_state = EDITOR_STATE.get().write().unwrap();
+    let updated_cursor = editor_state.text_buffer.undo();
+    match updated_cursor {
+        Some(cursor) => {
+            return Some((editor_state.text_buffer.highlight_complete_text(), cursor));
+        }
+        None => return None,
+    };
+}
+
+#[tauri::command]
+pub fn redo() -> Option<(highlight::HighlightedText, Cursor)> {
+    let mut editor_state = EDITOR_STATE.get().write().unwrap();
+    let updated_cursor = editor_state.text_buffer.redo();
+    match updated_cursor {
+        Some(cursor) => {
+            return Some((editor_state.text_buffer.highlight_complete_text(), cursor));
+        }
+        None => return None,
+    };
+}
+
+#[tauri::command]
 pub fn get_selected_text(selection: Selection) -> String {
     let editor_state = EDITOR_STATE.get().read().unwrap();
     let selected_text = editor_state.text_buffer.get_selected_text(selection);

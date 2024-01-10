@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use crate::editor::highlight;
 
 use super::highlight::LanguageHighlightTypeMapping;
@@ -8,7 +10,7 @@ pub struct Cursor {
     pub column: usize,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Selection {
     pub start: Cursor,
     pub end: Cursor,
@@ -19,6 +21,19 @@ pub enum Language {
     Python,
 }
 
+#[derive(Debug)]
+pub enum Update {
+    InsertUpdate {
+        start: Cursor,
+        end: Cursor,
+        text: String,
+    },
+    RemoveUpdate {
+        selection: Selection,
+        text: String,
+    },
+}
+
 /// Basic text buffer implementation using lines
 pub struct LineTextBuffer {
     pub file_path: Option<String>,
@@ -26,6 +41,8 @@ pub struct LineTextBuffer {
     pub syntax_tree: Option<tree_sitter::Tree>,
     pub language: Language,
     pub tokens: Option<Vec<(tree_sitter::Range, String)>>,
+    pub updates: VecDeque<Update>,
+    pub update_idx: usize,
 }
 
 impl LineTextBuffer {
@@ -43,6 +60,8 @@ impl LineTextBuffer {
             syntax_tree: None,
             language: Language::PlainText,
             tokens: None,
+            updates: VecDeque::new(),
+            update_idx: 0,
         }
     }
 
@@ -61,6 +80,8 @@ impl LineTextBuffer {
             syntax_tree: None,
             language: Language::PlainText,
             tokens: None,
+            updates: VecDeque::new(),
+            update_idx: 0,
         }
     }
 
@@ -238,7 +259,7 @@ impl LineTextBuffer {
     }
 
     /// Insert text at cursor position and returns the updated cursor position
-    pub fn insert_text(&mut self, text: String, cursor: Cursor) -> Cursor {
+    pub fn insert_text_no_log(&mut self, text: &String, cursor: &Cursor) -> Cursor {
         let mut updated_cursor = cursor.clone();
         let current_line = self.lines[cursor.row].clone();
         let mut text_iter = text.split('\n');
@@ -256,18 +277,35 @@ impl LineTextBuffer {
         let mut current_line = self.lines[updated_cursor.row].clone();
         current_line.push_str(s2);
         self.lines[updated_cursor.row] = current_line;
+
+        updated_cursor
+    }
+
+    /// Insert text and log it to updates
+    pub fn insert_text(&mut self, text: String, cursor: Cursor) -> Cursor {
+        let updated_cursor = self.insert_text_no_log(&text, &cursor);
+
+        self.updates.truncate(self.update_idx);
+        self.updates.push_back(Update::InsertUpdate {
+            start: cursor,
+            end: updated_cursor.clone(),
+            text,
+        });
+        self.update_idx = self.updates.len();
+
         updated_cursor
     }
 
     /// Remove the selected text and returns the updated cursor position
     /// and the deleted text
-    pub fn remove_text(&mut self, selection: Selection) -> (String, Cursor) {
+    pub fn remove_text_no_log(&mut self, selection: &Selection) -> (String, Cursor) {
         if selection.start.row == selection.end.row {
             let current_line = self.lines[selection.start.row].clone();
             let (first, second) = current_line.split_at(selection.end.column);
             let (first, middle) = first.split_at(selection.start.column);
             self.lines[selection.start.row] = first.to_owned() + second;
-            (middle.to_owned(), selection.start)
+
+            (middle.to_owned(), selection.start.clone())
         } else {
             let mut buf = String::new();
 
@@ -287,8 +325,74 @@ impl LineTextBuffer {
             buf.insert(0, '\n');
             buf.insert_str(0, middle);
             self.lines[selection.start.row] = first.to_owned() + second;
-            (buf, selection.start)
+
+            (buf, selection.start.clone())
         }
+    }
+
+    /// Remove the selected text and log it to updates
+    pub fn remove_text(&mut self, selection: Selection) -> (String, Cursor) {
+        let (buf, _updated_cursor) = self.remove_text_no_log(&selection);
+        self.updates.truncate(self.update_idx);
+        self.updates.push_back(Update::RemoveUpdate {
+            selection: selection.clone(),
+            text: buf.clone(),
+        });
+        self.update_idx = self.updates.len();
+
+        (buf, selection.start)
+    }
+
+    /// Undo last change
+    pub fn undo(&mut self) -> Option<Cursor> {
+        if self.update_idx > 0 {
+            self.update_idx -= 1;
+            let update = self.updates.get(self.update_idx).unwrap();
+            match update {
+                Update::InsertUpdate {
+                    start,
+                    end,
+                    text: _,
+                } => {
+                    let (_removed_text, updated_cursor) = self.remove_text_no_log(&Selection {
+                        start: start.clone(),
+                        end: end.clone(),
+                    });
+                    return Some(updated_cursor);
+                }
+                Update::RemoveUpdate { selection, text } => {
+                    let text = text.clone();
+                    let selection = selection.clone();
+                    let updated_cursor = self.insert_text_no_log(&text, &selection.start);
+                    return Some(updated_cursor);
+                }
+            }
+        }
+        None
+    }
+
+    /// Redo last change
+    pub fn redo(&mut self) -> Option<Cursor> {
+        if self.update_idx < self.updates.len() {
+            self.update_idx += 1;
+            let update = self.updates.get(self.update_idx - 1).unwrap();
+            match update {
+                Update::InsertUpdate {
+                    start,
+                    end: _,
+                    text,
+                } => {
+                    let updated_cursor = self.insert_text_no_log(&text.clone(), &start.clone());
+                    return Some(updated_cursor);
+                }
+                Update::RemoveUpdate { selection, text: _ } => {
+                    let (_removed_text, updated_cursor) =
+                        self.remove_text_no_log(&selection.clone());
+                    return Some(updated_cursor);
+                }
+            }
+        }
+        None
     }
 
     /// Get text at selection

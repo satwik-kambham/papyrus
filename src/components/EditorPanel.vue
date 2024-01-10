@@ -357,6 +357,34 @@ async function remove_character() {
   }
 }
 
+// Undo last action
+async function undo() {
+  let update = await invoke("undo");
+  console.log(update);
+  if (update != null) {
+    editorStore.content = update[0].text;
+    statusStore.cursorRow = update[1].row;
+    statusStore.cursorColumn = update[1].column;
+    statusStore.startCursorRow = update[1].row;
+    statusStore.startCursorColumn = update[1].column;
+    await setCursorPosition(update[1].row, update[1].column);
+  }
+}
+
+// Redo last action
+async function redo() {
+  let update = await invoke("redo");
+  console.log(update);
+  if (update != null) {
+    editorStore.content = update[0].text;
+    statusStore.cursorRow = update[1].row;
+    statusStore.cursorColumn = update[1].column;
+    statusStore.startCursorRow = update[1].row;
+    statusStore.startCursorColumn = update[1].column;
+    await setCursorPosition(update[1].row, update[1].column);
+  }
+}
+
 // Remove character before cursor
 async function get_selected_text() {
   if (selection_made()) {
@@ -566,6 +594,10 @@ async function key_event(e) {
       } else if (e.key === "x") {
         let removed_text = await remove_character();
         await writeText(removed_text);
+      } else if (e.key === "z") {
+        await undo();
+      } else if (e.key === "y") {
+        await redo();
       }
     } else if (e.key.length == 1 || e.key === "Enter") {
       let key = e.key;
