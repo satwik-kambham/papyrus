@@ -16,11 +16,15 @@ async function open_file() {
   });
   if (selected !== null) {
     // user selected a single file
-    invoke("create_buffer_from_file_path", { path: selected })
-      .then((success) => {
+    invoke("create_buffer_from_file_path", {
+      path: selected,
+    })
+      .then((buffer_idx) => {
         statusStore.encoding = "utf8";
-        editorStore.buffer_idx = 0;
-        invoke("get_highlighted_text").then((content) => {
+        editorStore.bufferIdx = buffer_idx;
+        invoke("get_highlighted_text", {
+          bufferIdx: editorStore.bufferIdx,
+        }).then((content) => {
           editorStore.content = content.text;
         });
       })
@@ -39,7 +43,9 @@ async function open_folder() {
   });
   if (selected !== null) {
     // user selected a single folder
-    invoke("get_folder_content", { path: selected })
+    invoke("get_folder_content", {
+      path: selected,
+    })
       .then((entries) => {
         console.log(entries);
         workspaceStore.folder = selected;
@@ -52,7 +58,9 @@ async function open_folder() {
 }
 
 async function save_current() {
-  invoke("save_buffer")
+  invoke("save_buffer", {
+    bufferIdx: editorStore.bufferIdx,
+  })
     .then((success) => {
       console.log("File saved successfully");
     })
@@ -65,7 +73,10 @@ async function save_as() {
   const selected = await save();
   if (selected !== null) {
     // user selected a single file
-    invoke("save_buffer_to_new_file", { path: selected })
+    invoke("save_buffer_to_new_file", {
+      bufferIdx: editorStore.bufferIdx,
+      path: selected,
+    })
       .then((success) => {
         console.log("File saved successfully");
       })

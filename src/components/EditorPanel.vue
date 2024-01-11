@@ -276,6 +276,7 @@ async function insert_character(character) {
     await remove_character();
   }
   let update = await invoke("insert_text", {
+    bufferIdx: editorStore.bufferIdx,
     text: character,
     cursor: {
       row: statusStore.cursorRow,
@@ -344,6 +345,7 @@ async function remove_character() {
       }
     }
     let update = await invoke("remove_text", {
+      bufferIdx: editorStore.bufferIdx,
       selection: s,
     });
     editorStore.content = update[0].text;
@@ -359,7 +361,9 @@ async function remove_character() {
 
 // Undo last action
 async function undo() {
-  let update = await invoke("undo");
+  let update = await invoke("undo", {
+    bufferIdx: editorStore.bufferIdx,
+  });
   console.log(update);
   if (update != null) {
     editorStore.content = update[0].text;
@@ -373,7 +377,9 @@ async function undo() {
 
 // Redo last action
 async function redo() {
-  let update = await invoke("redo");
+  let update = await invoke("redo", {
+    bufferIdx: editorStore.bufferIdx,
+  });
   console.log(update);
   if (update != null) {
     editorStore.content = update[0].text;
@@ -412,6 +418,7 @@ async function get_selected_text() {
     };
 
     let selected_text = await invoke("get_selected_text", {
+      bufferIdx: editorStore.bufferIdx,
       selection: s,
     });
     return selected_text;
@@ -421,13 +428,16 @@ async function get_selected_text() {
 
 // Get lines length (total rows)
 async function get_lines_length() {
-  let lines_length = await invoke("get_lines_length");
+  let lines_length = await invoke("get_lines_length", {
+    bufferIdx: editorStore.bufferIdx,
+  });
   return lines_length;
 }
 
 // Get row length
 async function get_row_length(row_number) {
   let row_length = await await invoke("get_row_length", {
+    bufferIdx: editorStore.bufferIdx,
     row: row_number,
   });
   return row_length;

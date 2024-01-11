@@ -14,10 +14,14 @@ function clickItem(index, entries) {
   const entry = entries[index];
   if (!entry.is_dir) {
     invoke("create_buffer_from_file_path", { path: entry.path })
-      .then((success) => {
+      .then((buffer_idx) => {
+        console.log(buffer_idx);
+
         statusStore.encoding = "utf8";
-        editorStore.buffer_idx = 0;
-        invoke("get_highlighted_text").then((content) => {
+        editorStore.bufferIdx = buffer_idx;
+        invoke("get_highlighted_text", {
+          bufferIdx: editorStore.bufferIdx,
+        }).then((content) => {
           editorStore.content = content.text;
         });
       })
@@ -27,7 +31,9 @@ function clickItem(index, entries) {
       });
   } else {
     if (entry.entries == null) {
-      invoke("get_folder_content", { path: entry.path })
+      invoke("get_folder_content", {
+        path: entry.path,
+      })
         .then((entries) => {
           entry.entries = entries;
         })
