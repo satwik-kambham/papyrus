@@ -85,13 +85,13 @@ function wheel_event(e) {
   hOffset.value = clamp(
     hOffset.value - e.deltaX * 0.5,
     -e.currentTarget.clientWidth + e.currentTarget.parentNode.clientWidth,
-    0
+    0,
   );
 
   vOffset.value = clamp(
     vOffset.value - e.deltaY * 0.5,
     -e.currentTarget.clientHeight + e.currentTarget.parentNode.clientHeight,
-    0
+    0,
   );
 }
 
@@ -182,7 +182,7 @@ async function setCursorPosition(row, column) {
     } else {
       let offsets = await calculateOffsets(
         start.row,
-        await get_row_length(start.row)
+        await get_row_length(start.row),
       );
       highlights.push({
         vOffset: startOffsets[0],
@@ -244,11 +244,11 @@ function get_mouse_position(e) {
     // If user clicked on text
     // Calculating row and column
     row = Math.floor(
-      e.target.parentNode.offsetTop / e.target.parentNode.clientHeight
+      e.target.parentNode.offsetTop / e.target.parentNode.clientHeight,
     );
 
     let children = Array.from(
-      editorElement.value.children[row].firstChild.children
+      editorElement.value.children[row].firstChild.children,
     );
     let current = children.indexOf(textNode.parentNode);
     column = offset;
@@ -454,7 +454,7 @@ async function move_cursor_up() {
     statusStore.cursorRow -= 1;
     let column = Math.min(
       statusStore.cursorColumn,
-      await get_row_length(statusStore.cursorRow)
+      await get_row_length(statusStore.cursorRow),
     );
     statusStore.cursorColumn = column;
     statusStore.startCursorRow = statusStore.cursorRow;
@@ -471,7 +471,7 @@ async function move_cursor_down() {
     statusStore.cursorRow += 1;
     let column = Math.min(
       statusStore.cursorColumn,
-      await get_row_length(statusStore.cursorRow)
+      await get_row_length(statusStore.cursorRow),
     );
     statusStore.cursorColumn = column;
     statusStore.startCursorRow = statusStore.cursorRow;

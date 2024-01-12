@@ -21,8 +21,8 @@ function clickItem(index, entries) {
       class="flex hover:bg-atom-bg-light cursor-pointer"
       @click="clickItem(index, props.entries)"
       :class="{
-      'bg-atom-bg-light': selectedIndex === index,
-    }"
+        'bg-atom-bg-light': selectedIndex === index,
+      }"
     >
       <img
         class="pl-1 pr-2"
@@ -30,8 +30,8 @@ function clickItem(index, entries) {
           !entry.is_dir
             ? '/file.svg'
             : entry.entries == null
-            ? '/folder.svg'
-            : '/folder-open.svg'
+              ? '/folder.svg'
+              : '/folder-open.svg'
         "
         alt="File Icon"
       />

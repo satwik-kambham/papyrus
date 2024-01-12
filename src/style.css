@@ -3,24 +3,24 @@
 @tailwind utilities;
 
 .custom-scrollbar {
-    scrollbar-width: thin;
-    scrollbar-color: #4a5568 #2d3748;
+  scrollbar-width: thin;
+  scrollbar-color: #4a5568 #2d3748;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-    width: 5px;
-    height: 2px;
+  width: 5px;
+  height: 2px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: #333a45;
+  background-color: #333a45;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-    background-color: #4a5568;
+  background-color: #4a5568;
 }
 
 .custom-scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: #4a5568 #2d3748;
+  scrollbar-width: thin;
+  scrollbar-color: #4a5568 #2d3748;
 }
