@@ -14,9 +14,16 @@ function clickItem(index, entries) {
   const entry = entries[index];
   if (!entry.is_dir) {
     invoke("create_buffer_from_file_path", { path: entry.path })
-      .then((buffer_idx) => {
-        console.log(buffer_idx);
-
+      .then(async (buffer_idx) => {
+        const fileInfo = await invoke("get_file_info", { path: entry.path });
+        let entryExists = false;
+        workspaceStore.openEditors.forEach((entry) => {
+          if (entry.path == fileInfo.path) entryExists = true;
+        });
+        if (!entryExists) {
+          workspaceStore.openEditors.push(fileInfo);
+        }
+        workspaceStore.selectedEntry = entry.path;
         statusStore.encoding = "utf8";
         editorStore.bufferIdx = buffer_idx;
         invoke("get_highlighted_text", {

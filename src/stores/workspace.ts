@@ -7,5 +7,8 @@ export const useWorkspaceStore = defineStore("workspace", () => {
 
   const maximized = ref(false);
 
-  return { folder, entries, maximized };
+  const openEditors = ref([]);
+  const selectedEntry = ref(null);
+
+  return { folder, entries, maximized, openEditors, selectedEntry };
 });

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { open, save } from "@tauri-apps/api/dialog";
-import { app, invoke } from "@tauri-apps/api";
+import { invoke } from "@tauri-apps/api";
 import { useWorkspaceStore } from "../stores/workspace";
 import { useStatusStore } from "../stores/status";
 import { useEditorStore } from "../stores/editor";
@@ -19,7 +19,16 @@ async function open_file() {
     invoke("create_buffer_from_file_path", {
       path: selected,
     })
-      .then((buffer_idx) => {
+      .then(async (buffer_idx) => {
+        const fileInfo = await invoke("get_file_info", { path: selected });
+        let entryExists = false;
+        workspaceStore.openEditors.forEach((entry) => {
+          if (entry.path == fileInfo.path) entryExists = true;
+        });
+        if (!entryExists) {
+          workspaceStore.openEditors.push(fileInfo);
+        }
+        workspaceStore.selectedEntry = selected;
         statusStore.encoding = "utf8";
         editorStore.bufferIdx = buffer_idx;
         invoke("get_highlighted_text", {

@@ -31,6 +31,7 @@ fn main() {
             commands::get_selected_text,
             commands::undo,
             commands::redo,
+            commands::get_file_info,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

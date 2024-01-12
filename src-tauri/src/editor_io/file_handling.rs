@@ -13,6 +13,35 @@ pub struct FolderEntry {
     extension: String,
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct FileEntry {
+    path: String,
+    name: String,
+    extension: String,
+}
+
+impl FileEntry {
+    pub fn new(path_str: String) -> Self {
+        let path = Path::new(&path_str);
+
+        Self {
+            path: path_str.clone(),
+            name: path
+                .file_name()
+                .unwrap_or_default()
+                .to_str()
+                .unwrap()
+                .to_string(),
+            extension: path
+                .extension()
+                .unwrap_or_default()
+                .to_str()
+                .unwrap()
+                .to_string(),
+        }
+    }
+}
+
 pub fn read_file_content(path: &str) -> Result<String, Box<dyn Error>> {
     let mut f = File::open(path)?;
     let mut buf = String::new();

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, nextTick, onUpdated } from "vue";
 import { invoke } from "@tauri-apps/api";
+import { useWorkspaceStore } from "../stores/workspace";
 import { useEditorStore } from "../stores/editor";
 import { useStatusStore } from "../stores/status";
 import { readText, writeText } from "@tauri-apps/api/clipboard";
 
+const workspaceStore = useWorkspaceStore();
 const statusStore = useStatusStore();
 const editorStore = useEditorStore();
 
@@ -13,6 +15,7 @@ const editorElement = ref(null);
 const cursorElement = ref(null);
 const dummyElement = ref(null);
 const hiddenInput = ref(null);
+
 const currentLine = ref(null);
 const currentGutterLine = ref(null);
 const hOffset = ref(0);
@@ -630,92 +633,146 @@ async function key_event(e) {
     }
   });
 }
+
+function resetState() {
+  currentLine.value = null;
+  currentGutterLine.value = null;
+  hOffset.value = 0;
+  vOffset.value = 0;
+  cursorHOffset.value = 0;
+  cursorVOffset.value = 0;
+  selectionHighlights.value = [];
+
+  selecting = false;
+
+  gutterWidth.value = 0;
+
+  statusStore.cursorRow = 0;
+  statusStore.cursorColumn = 0;
+  statusStore.startCursorRow = 0;
+  statusStore.startCursorColumn = 0;
+}
+
+async function switchBuffer(entry) {
+  workspaceStore.selectedEntry = entry.path;
+  await asyncQueue.enqueue(async () => {
+    resetState();
+    invoke("create_buffer_from_file_path", { path: entry.path })
+      .then((buffer_idx) => {
+        statusStore.encoding = "utf8";
+        editorStore.bufferIdx = buffer_idx;
+        invoke("get_highlighted_text", {
+          bufferIdx: editorStore.bufferIdx,
+        }).then((content) => {
+          editorStore.content = content.text;
+        });
+      })
+      .catch(() => {
+        statusStore.encoding = "Unknown";
+        console.error(error);
+      });
+  });
+}
 </script>
 <template>
-  <div class="flex h-full">
-    <div
-      class="h-full relative bg-atom-bg z-20 w-0"
-      :style="{ width: gutterWidth + 'px' }"
-    >
+  <div class="flex flex-col h-full">
+    <div class="flex overflow-auto custom-scrollbar z-30 bg-atom-bg">
       <div
-        ref="gutterElement"
-        class="min-h-full font-code antialiased text-xl overflow-visible h-fit pointer-events-none select-none absolute w-fit text-atom-text-light"
-        :style="{ top: vOffset + 'px' }"
-      >
-        <div
-          class="px-5"
-          v-for="(line, index) in editorStore.content"
-          :key="index"
-        >
-          <span class="inline-block">
-            {{ index + 1 }}
-          </span>
-        </div>
-      </div>
-    </div>
-    <div class="flex-1 h-full relative">
-      <div
-        ref="editorElement"
-        class="bg-transparent min-h-full font-code antialiased text-xl absolute min-w-full overflow-visible h-fit w-fit cursor-text z-10"
-        @wheel="wheel_event"
-        @mousedown="mouse_down"
-        @mousemove="mouse_move"
-        @mouseup="mouse_up"
-        :style="{ top: vOffset + 'px', left: hOffset + 'px' }"
-      >
-        <div class="" v-for="line in editorStore.content">
-          <span class="inline-block">
-            <span
-              :class="['whitespace-pre', 'text-atom-highlight-' + token[0]]"
-              v-for="token in line"
-            >
-              {{ token[1] }}
-            </span>
-          </span>
-        </div>
-      </div>
-      <div
-        ref="cursorElement"
-        class="absolute font-code text-xl antialiased border-atom-primary border-l-2 pointer-events-none select-none animate-blink z-20"
-        :style="{
-          top: vOffset + cursorVOffset + 'px',
-          left: hOffset + cursorHOffset + 'px',
-          width: cursorWidth + 'px',
-          height: cursorHeight + 'px',
+        class="px-2 py-1 border-x-2 border-atom-bg-light cursor-pointer"
+        v-for="entry in workspaceStore.openEditors"
+        @click="async (e) => await switchBuffer(entry)"
+        :class="{
+          'bg-atom-bg-light': entry.path == workspaceStore.selectedEntry,
         }"
       >
-        <input
-          ref="hiddenInput"
-          class="opacity-0"
-          tabindex="-1"
-          type="text"
-          @keydown="key_event"
-          :style="{
-            width: 1 + 'px',
-            height: cursorHeight + 'px',
-          }"
-        />
+        {{ entry.name }}
       </div>
+    </div>
+    <div class="flex h-full">
       <div
-        ref="highlightElement"
-        class="absolute font-code text-xl antialiased pointer-events-none select-none h-full w-full bg-atom-bg"
+        class="h-full relative bg-atom-bg z-20 w-0"
+        :style="{ width: gutterWidth + 'px' }"
       >
         <div
-          class="absolute bg-atom-highlight z-0"
+          ref="gutterElement"
+          class="min-h-full font-code antialiased text-xl overflow-visible h-fit pointer-events-none select-none absolute w-fit text-atom-text-light"
+          :style="{ top: vOffset + 'px' }"
+        >
+          <div
+            class="px-5"
+            v-for="(line, index) in editorStore.content"
+            :key="index"
+          >
+            <span class="inline-block">
+              {{ index + 1 }}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="flex-1 h-full relative">
+        <div
+          ref="editorElement"
+          class="bg-transparent min-h-full font-code antialiased text-xl absolute min-w-full overflow-visible h-fit w-fit cursor-text z-10"
+          @wheel="wheel_event"
+          @mousedown="mouse_down"
+          @mousemove="mouse_move"
+          @mouseup="mouse_up"
+          :style="{ top: vOffset + 'px', left: hOffset + 'px' }"
+        >
+          <div class="" v-for="line in editorStore.content">
+            <span class="inline-block">
+              <span
+                :class="['whitespace-pre', 'text-atom-highlight-' + token[0]]"
+                v-for="token in line"
+              >
+                {{ token[1] }}
+              </span>
+            </span>
+          </div>
+        </div>
+        <div
+          ref="cursorElement"
+          class="absolute font-code text-xl antialiased border-atom-primary border-l-2 pointer-events-none select-none animate-blink z-20"
           :style="{
-            top: vOffset + highlight.vOffset + 'px',
-            left: hOffset + highlight.startHOffset + 'px',
-            width: highlight.endHOffset - highlight.startHOffset + 'px',
+            top: vOffset + cursorVOffset + 'px',
+            left: hOffset + cursorHOffset + 'px',
+            width: cursorWidth + 'px',
             height: cursorHeight + 'px',
           }"
-          v-for="highlight in selectionHighlights"
-        ></div>
-      </div>
-      <div
-        class="absolute invisible whitespace-pre text-xl text-atom-highlight-None text-atom-highlight-White text-atom-highlight-Red text-atom-highlight-Orange text-atom-highlight-Blue text-atom-highlight-Green text-atom-highlight-Purple text-atom-highlight-Yellow text-atom-highlight-Gray text-atom-highlight-Turquoise"
-        ref="dummyElement"
-      >
-        <span>x</span>
+        >
+          <input
+            ref="hiddenInput"
+            class="opacity-0"
+            tabindex="-1"
+            type="text"
+            @keydown="key_event"
+            :style="{
+              width: 1 + 'px',
+              height: cursorHeight + 'px',
+            }"
+          />
+        </div>
+        <div
+          ref="highlightElement"
+          class="absolute font-code text-xl antialiased pointer-events-none select-none h-full w-full bg-atom-bg"
+        >
+          <div
+            class="absolute bg-atom-highlight z-0"
+            :style="{
+              top: vOffset + highlight.vOffset + 'px',
+              left: hOffset + highlight.startHOffset + 'px',
+              width: highlight.endHOffset - highlight.startHOffset + 'px',
+              height: cursorHeight + 'px',
+            }"
+            v-for="highlight in selectionHighlights"
+          ></div>
+        </div>
+        <div
+          class="absolute invisible whitespace-pre text-xl text-atom-highlight-None text-atom-highlight-White text-atom-highlight-Red text-atom-highlight-Orange text-atom-highlight-Blue text-atom-highlight-Green text-atom-highlight-Purple text-atom-highlight-Yellow text-atom-highlight-Gray text-atom-highlight-Turquoise"
+          ref="dummyElement"
+        >
+          <span>x</span>
+        </div>
       </div>
     </div>
   </div>

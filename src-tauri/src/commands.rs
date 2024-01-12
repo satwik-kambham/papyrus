@@ -11,6 +11,12 @@ pub fn get_folder_content(path: String) -> Result<Vec<file_handling::FolderEntry
 }
 
 #[tauri::command]
+pub fn get_file_info(path: String) -> file_handling::FileEntry {
+    let entry = file_handling::FileEntry::new(path);
+    entry
+}
+
+#[tauri::command]
 pub fn create_buffer_from_file_path(path: String) -> Result<usize, String> {
     let mut editor_state = EDITOR_STATE.get().write().unwrap();
     for (idx, buffer) in editor_state.text_buffers.iter().enumerate() {
