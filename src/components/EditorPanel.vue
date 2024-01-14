@@ -679,7 +679,8 @@ async function switchBuffer(entry) {
     <div class="flex overflow-auto custom-scrollbar z-30 bg-atom-bg">
       <div
         class="px-2 py-1 border-x-2 border-atom-bg-light cursor-pointer"
-        v-for="entry in workspaceStore.openEditors"
+        v-for="(entry, index) in workspaceStore.openEditors"
+        :key="index"
         @click="async (e) => await switchBuffer(entry)"
         :class="{
           'bg-atom-bg-light': entry.path == workspaceStore.selectedEntry,
@@ -723,7 +724,8 @@ async function switchBuffer(entry) {
             <span class="inline-block">
               <span
                 :class="['whitespace-pre', 'text-atom-highlight-' + token[0]]"
-                v-for="token in line"
+                v-for="(token, index) in line"
+                :key="index"
               >
                 {{ token[1] }}
               </span>
@@ -764,7 +766,8 @@ async function switchBuffer(entry) {
               width: highlight.endHOffset - highlight.startHOffset + 'px',
               height: cursorHeight + 'px',
             }"
-            v-for="highlight in selectionHighlights"
+            v-for="(highlight, index) in selectionHighlights"
+            :key="index"
           ></div>
         </div>
         <div
