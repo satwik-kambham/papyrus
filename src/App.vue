@@ -3,6 +3,7 @@ import MenuBar from "./components/MenuBar.vue";
 import EditorPanel from "./components/EditorPanel.vue";
 import SidePanel from "./components/SidePanel.vue";
 import StatusBar from "./components/StatusBar.vue";
+import TerminalComponent from "./components/TerminalComponent.vue";
 
 import { useWorkspaceStore } from "./stores/workspace";
 import { appWindow } from "@tauri-apps/api/window";
@@ -23,11 +24,18 @@ appWindow.onResized(async (e) => {
       <MenuBar />
     </div>
     <div class="flex flex-1 overflow-auto">
-      <div class="w-1/6 overflow-auto h-full custom-scrollbar">
+      <div class="w-1/5 overflow-auto h-full custom-scrollbar">
         <SidePanel />
       </div>
-      <div class="flex-1 overflow-hidden">
-        <EditorPanel />
+      <div class="flex-1 flex flex-col">
+        <div class="flex-1">
+          <div class="overflow-hidden h-full">
+            <EditorPanel />
+          </div>
+        </div>
+        <div class="overflow-hidden">
+          <Suspense><TerminalComponent /></Suspense>
+        </div>
       </div>
     </div>
     <div class="">

@@ -367,7 +367,6 @@ async function undo() {
   let update = await invoke("undo", {
     bufferIdx: editorStore.bufferIdx,
   });
-  console.log(update);
   if (update != null) {
     editorStore.content = update[0].text;
     statusStore.cursorRow = update[1].row;
@@ -383,7 +382,6 @@ async function redo() {
   let update = await invoke("redo", {
     bufferIdx: editorStore.bufferIdx,
   });
-  console.log(update);
   if (update != null) {
     editorStore.content = update[0].text;
     statusStore.cursorRow = update[1].row;
