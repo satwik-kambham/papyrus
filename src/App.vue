@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import MenuBar from "./components/MenuBar.vue";
 import EditorPanel from "./components/EditorPanel.vue";
-import SidePanel from "./components/SidePanel.vue";
+import SideBar from "./components/SideBar.vue";
 import StatusBar from "./components/StatusBar.vue";
 import TerminalComponent from "./components/TerminalComponent.vue";
 
@@ -25,7 +25,7 @@ appWindow.onResized(async (e) => {
     </div>
     <div class="flex flex-1 overflow-auto">
       <div class="w-1/5 overflow-auto h-full custom-scrollbar">
-        <SidePanel />
+        <SideBar />
       </div>
       <div class="flex-1 flex flex-col">
         <div class="flex-1">
