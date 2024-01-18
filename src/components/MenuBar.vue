@@ -110,7 +110,7 @@ async function quit() {
 </script>
 
 <template>
-  <div data-tauri-drag-region class="bg-atom-bg-dark p-1 flex">
+  <div data-tauri-drag-region class="bg-atom-bg-dark p-1 flex select-none">
     <div class="pr-1 cursor-pointer" @click="open_file()">Open File</div>
     <div class="pr-1 cursor-pointer" @click="open_folder()">Open Folder</div>
     <div class="px-1 cursor-pointer" @click="save_current()">Save</div>

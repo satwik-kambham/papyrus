@@ -55,7 +55,7 @@ function clickItem(index, entries) {
 </script>
 
 <template>
-  <div class="bg-atom-bg-dark h-full">
+  <div class="bg-atom-bg-dark h-full select-none">
     <div class="border-atom-text-dark border-b-2 text-justify p-1">Project</div>
     <div class="text-sm">
       <TreeView

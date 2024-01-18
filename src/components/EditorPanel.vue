@@ -676,7 +676,7 @@ async function switchBuffer(entry) {
   <div class="flex flex-col h-full">
     <div class="flex overflow-auto custom-scrollbar z-30 bg-atom-bg">
       <div
-        class="px-2 py-1 border-x-2 border-atom-bg-light cursor-pointer"
+        class="px-2 py-1 border-x-2 border-atom-bg-light cursor-pointer select-none"
         v-for="(entry, index) in workspaceStore.openEditors"
         :key="index"
         @click="async (e) => await switchBuffer(entry)"
@@ -711,7 +711,7 @@ async function switchBuffer(entry) {
       <div class="flex-1 h-full relative">
         <div
           ref="editorElement"
-          class="bg-transparent min-h-full font-code antialiased text-xl absolute min-w-full overflow-visible h-fit w-fit cursor-text z-10"
+          class="bg-transparent min-h-full font-code antialiased text-xl absolute min-w-full overflow-visible h-fit w-fit cursor-text z-10 select-none"
           @wheel="wheel_event"
           @mousedown="mouse_down"
           @mousemove="mouse_move"

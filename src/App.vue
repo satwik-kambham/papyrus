@@ -7,6 +7,7 @@ import TerminalComponent from "./components/TerminalComponent.vue";
 
 import { useWorkspaceStore } from "./stores/workspace";
 import { appWindow } from "@tauri-apps/api/window";
+import CollapsiblePanel from "./components/CollapsiblePanel.vue";
 
 const workspaceStore = useWorkspaceStore();
 
@@ -24,18 +25,16 @@ appWindow.onResized(async (e) => {
       <MenuBar />
     </div>
     <div class="flex flex-1 overflow-auto">
-      <div class="w-1/5 overflow-auto h-full custom-scrollbar">
-        <SideBar />
-      </div>
+      <CollapsiblePanel><SideBar></SideBar></CollapsiblePanel>
       <div class="flex-1 flex flex-col">
         <div class="flex-1">
           <div class="overflow-hidden h-full">
             <EditorPanel />
           </div>
         </div>
-        <div class="overflow-hidden">
-          <Suspense><TerminalComponent /></Suspense>
-        </div>
+        <CollapsiblePanel horizontal
+          ><Suspense><TerminalComponent /></Suspense
+        ></CollapsiblePanel>
       </div>
     </div>
     <div class="">

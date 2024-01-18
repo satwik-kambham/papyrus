@@ -94,11 +94,19 @@ const unlisten = await appWindow.listen(
   },
 );
 
+workspaceStore.$onAction((context) => {
+  context.after(() => {
+    fitAddon.fit();
+  });
+});
+
 onUnmounted(() => {
   unlisten();
 });
 </script>
 
 <template>
-  <div class="bg-atom-bg-dark custom-scrollbar" ref="terminalElement"></div>
+  <div class="w-full h-full bg-black">
+    <div class="w-full h-full custom-scrollbar" ref="terminalElement"></div>
+  </div>
 </template>
