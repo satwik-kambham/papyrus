@@ -18,17 +18,19 @@ appWindow.onResized(async (e) => {
 
 <template>
   <div
-    class="bg-atom-bg-dark text-atom-text h-screen flex flex-col border-2 border-atom-bg-light overflow-hidden"
+    class="bg-atom-bg-dark text-atom-text h-screen flex flex-col border-2 border-atom-bg-light overflow-y-hidden w-full"
     :class="workspaceStore.maximized ? 'rounded-none' : 'rounded-xl'"
   >
-    <div data-tauri-drag-region class="">
+    <div data-tauri-drag-region class="w-full">
       <MenuBar />
     </div>
-    <div class="flex flex-1 overflow-auto">
-      <CollapsiblePanel><SideBar></SideBar></CollapsiblePanel>
-      <div class="flex-1 flex flex-col">
-        <div class="flex-1">
-          <div class="overflow-hidden h-full">
+    <div class="flex flex-1 overflow-auto w-full">
+      <div class="flex-none">
+        <CollapsiblePanel><SideBar></SideBar></CollapsiblePanel>
+      </div>
+      <div class="flex flex-col shrink grow min-w-0">
+        <div class="flex-1 w-full">
+          <div class="overflow-hidden h-full w-full block">
             <EditorPanel />
           </div>
         </div>
@@ -37,7 +39,7 @@ appWindow.onResized(async (e) => {
         ></CollapsiblePanel>
       </div>
     </div>
-    <div class="">
+    <div class="w-full">
       <StatusBar />
     </div>
   </div>

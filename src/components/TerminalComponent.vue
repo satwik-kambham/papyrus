@@ -106,7 +106,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="w-full h-full bg-black">
+  <div class="w-full h-full bg-atom-bg-light overflow-hidden">
     <div class="w-full h-full custom-scrollbar" ref="terminalElement"></div>
   </div>
 </template>

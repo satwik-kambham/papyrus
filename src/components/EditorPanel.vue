@@ -676,7 +676,7 @@ async function switchBuffer(entry) {
   <div class="flex flex-col h-full">
     <div class="flex overflow-auto custom-scrollbar z-30 bg-atom-bg">
       <div
-        class="px-2 py-1 border-x-2 border-atom-bg-light cursor-pointer select-none"
+        class="px-2 py-1 border-x-2 border-atom-bg-light whitespace-nowrap cursor-pointer select-none"
         v-for="(entry, index) in workspaceStore.openEditors"
         :key="index"
         @click="async (e) => await switchBuffer(entry)"

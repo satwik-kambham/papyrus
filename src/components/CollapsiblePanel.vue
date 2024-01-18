@@ -57,8 +57,8 @@ onBeforeUnmount(() => {
   <div
     class="flex relative"
     :class="{
-      'h-full flex-row': !props.horizontal,
-      'w-full flex-col-reverse': props.horizontal,
+      'flex-row': !props.horizontal,
+      'flex-col-reverse': props.horizontal,
     }"
     :style="{
       width: props.horizontal ? '100%' : panelSize + 'px',
