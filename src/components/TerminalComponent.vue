@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { useWorkspaceStore } from "../stores/workspace";
-import { useStatusStore } from "../stores/status";
-import { useEditorStore } from "../stores/editor";
 import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import { ref, onMounted, onUnmounted } from "vue";
@@ -9,8 +7,6 @@ import { invoke } from "@tauri-apps/api";
 import { appWindow } from "@tauri-apps/api/window";
 
 const workspaceStore = useWorkspaceStore();
-const editorStore = useEditorStore();
-const statusStore = useStatusStore();
 
 const terminalElement = ref(null);
 
@@ -49,7 +45,18 @@ class AsyncQueue {
 
 const asyncQueue = new AsyncQueue();
 
-const terminal = new Terminal();
+const terminal = new Terminal({
+  cursorBlink: true,
+  cursorStyle: "bar",
+  cursorInactiveStyle: "none",
+  fontSize: 14,
+  fontFamily: "DejaVuSansM Nerd Font Mono, monospace",
+  theme: {
+    background: "#282c34",
+    foreground: "#abb2bf",
+    cursor: "#61afef",
+  },
+});
 const fitAddon = new FitAddon();
 
 onMounted(async () => {
@@ -106,7 +113,9 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="w-full h-full bg-atom-bg-light overflow-hidden">
+  <div
+    class="w-full h-full bg-atom-bg overflow-hidden border-t-4 border-atom-bg-light"
+  >
     <div class="w-full h-full custom-scrollbar" ref="terminalElement"></div>
   </div>
 </template>
