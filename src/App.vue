@@ -24,7 +24,7 @@ appWindow.onResized(async (e) => {
     <div data-tauri-drag-region class="w-full">
       <MenuBar />
     </div>
-    <div class="flex flex-1 overflow-auto w-full">
+    <div class="flex flex-1 overflow-hidden w-full">
       <div class="flex-none">
         <CollapsiblePanel><SideBar></SideBar></CollapsiblePanel>
       </div>
