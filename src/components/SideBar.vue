@@ -10,12 +10,14 @@ const workspaceStore = useWorkspaceStore();
 const editorStore = useEditorStore();
 const statusStore = useStatusStore();
 
-function clickItem(index, entries) {
+function clickItem(index: number, entries: Array<IFileEntry>) {
   const entry = entries[index];
   if (!entry.is_dir) {
-    invoke("create_buffer_from_file_path", { path: entry.path })
+    invoke<number>("create_buffer_from_file_path", { path: entry.path })
       .then(async (buffer_idx) => {
-        const fileInfo = await invoke("get_file_info", { path: entry.path });
+        const fileInfo = await invoke<IFileEntry>("get_file_info", {
+          path: entry.path,
+        });
         let entryExists = false;
         workspaceStore.openEditors.forEach((entry) => {
           if (entry.path == fileInfo.path) entryExists = true;
@@ -26,7 +28,7 @@ function clickItem(index, entries) {
         workspaceStore.selectedEntry = entry.path;
         statusStore.encoding = "utf8";
         editorStore.bufferIdx = buffer_idx;
-        invoke("get_highlighted_text", {
+        invoke<IHighlightedText>("get_highlighted_text", {
           bufferIdx: editorStore.bufferIdx,
         }).then((content) => {
           editorStore.content = content.text;
@@ -38,7 +40,7 @@ function clickItem(index, entries) {
       });
   } else {
     if (entry.entries == null) {
-      invoke("get_folder_content", {
+      invoke<Array<IFileEntry>>("get_folder_content", {
         path: entry.path,
       })
         .then((entries) => {

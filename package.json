@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "vue-tsc && npx eslint ./src",
+    "tslint": "vue-tsc",
+    "eslint": "npx eslint ./src",
     "format": "npx prettier . --write",
     "format-check": "npx prettier . --check"
   },

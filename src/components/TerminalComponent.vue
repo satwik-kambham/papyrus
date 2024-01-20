@@ -5,18 +5,26 @@ import { FitAddon } from "xterm-addon-fit";
 import { ref, onMounted, onUnmounted } from "vue";
 import { invoke } from "@tauri-apps/api";
 import { appWindow } from "@tauri-apps/api/window";
+import { Event } from "@tauri-apps/api/event";
 
 const workspaceStore = useWorkspaceStore();
 
-const terminalElement = ref(null);
+const terminalElement = ref<HTMLElement | null>(null);
 
 class AsyncQueue {
+  queue: Array<{
+    asyncFunction: () => Promise<any>;
+    resolve: (value: any) => void;
+    reject: (reason?: any) => void;
+  }>;
+  running: boolean;
+
   constructor() {
     this.queue = [];
     this.running = false;
   }
 
-  enqueue(asyncFunction) {
+  enqueue(asyncFunction: () => Promise<any>) {
     return new Promise((resolve, reject) => {
       this.queue.push({ asyncFunction, resolve, reject });
       this.run();
@@ -64,7 +72,7 @@ onMounted(async () => {
     await invoke("init_pty");
   });
   terminal.loadAddon(fitAddon);
-  terminal.open(terminalElement.value);
+  terminal.open(terminalElement.value!);
   terminal.onData(async (data) => {
     await asyncQueue.enqueue(async () => {
       await invoke("send_to_pty", {
@@ -96,8 +104,8 @@ window.onresize = () => {
 
 const unlisten = await appWindow.listen(
   "terminal_output",
-  async ({ payload }) => {
-    terminal.write(payload.output);
+  async (event: Event<ITerminalPayload>) => {
+    terminal.write(event.payload.output);
   },
 );
 

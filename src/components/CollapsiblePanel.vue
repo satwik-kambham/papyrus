@@ -14,7 +14,7 @@ const panelSize = ref(200);
 
 let prevPanelSize = 200;
 
-const handleMouseDown = (event) => {
+function handleMouseDown(event: MouseEvent) {
   isDragging.value = true;
   start.value = event.clientX;
   if (props.horizontal) {
@@ -23,9 +23,9 @@ const handleMouseDown = (event) => {
 
   document.addEventListener("mousemove", handleMouseMove);
   document.addEventListener("mouseup", handleMouseUp);
-};
+}
 
-const handleMouseMove = (event) => {
+function handleMouseMove(event: MouseEvent) {
   if (isDragging.value) {
     if (props.horizontal) {
       panelSize.value += -(event.clientY - start.value);
@@ -38,9 +38,9 @@ const handleMouseMove = (event) => {
   if (props.horizontal) {
     start.value = event.clientY;
   }
-};
+}
 
-const handleMouseUp = async () => {
+async function handleMouseUp() {
   isDragging.value = false;
 
   document.removeEventListener("mousemove", handleMouseMove);
@@ -48,7 +48,7 @@ const handleMouseUp = async () => {
 
   await nextTick();
   workspaceStore.resized();
-};
+}
 
 async function toggleMinimizer() {
   if (panelSize.value === 0) {

@@ -11,7 +11,7 @@ import CollapsiblePanel from "./components/CollapsiblePanel.vue";
 
 const workspaceStore = useWorkspaceStore();
 
-appWindow.onResized(async (e) => {
+appWindow.onResized(async () => {
   workspaceStore.maximized = await appWindow.isMaximized();
 });
 </script>

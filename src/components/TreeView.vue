@@ -1,11 +1,22 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { PropType, ref } from "vue";
 
-const selectedIndex = ref(null);
+const selectedIndex = ref<number | null>(null);
 
-const props = defineProps(["clickHandler", "entries"]);
+const props = defineProps({
+  entries: {
+    type: Array<IFileEntry>,
+    required: true,
+  },
+  clickHandler: {
+    type: Function as PropType<
+      (index: number, entries: Array<IFileEntry>) => void
+    >,
+    required: true,
+  },
+});
 
-function clickItem(index, entries) {
+function clickItem(index: number, entries: Array<IFileEntry>) {
   selectedIndex.value = index;
   props.clickHandler(index, entries);
 }

@@ -14,13 +14,15 @@ async function open_file() {
   const selected = await open({
     multiple: false,
   });
-  if (selected !== null) {
+  if (selected !== null && !Array.isArray(selected)) {
     // user selected a single file
-    invoke("create_buffer_from_file_path", {
+    invoke<number>("create_buffer_from_file_path", {
       path: selected,
     })
       .then(async (buffer_idx) => {
-        const fileInfo = await invoke("get_file_info", { path: selected });
+        const fileInfo = await invoke<IFileEntry>("get_file_info", {
+          path: selected,
+        });
         let entryExists = false;
         workspaceStore.openEditors.forEach((entry) => {
           if (entry.path == fileInfo.path) entryExists = true;
@@ -31,7 +33,7 @@ async function open_file() {
         workspaceStore.selectedEntry = selected;
         statusStore.encoding = "utf8";
         editorStore.bufferIdx = buffer_idx;
-        invoke("get_highlighted_text", {
+        invoke<IHighlightedText>("get_highlighted_text", {
           bufferIdx: editorStore.bufferIdx,
         }).then((content) => {
           editorStore.content = content.text;
@@ -50,13 +52,12 @@ async function open_folder() {
     multiple: false,
     recursive: true,
   });
-  if (selected !== null) {
+  if (selected !== null && !Array.isArray(selected)) {
     // user selected a single folder
-    invoke("get_folder_content", {
+    invoke<Array<IFileEntry>>("get_folder_content", {
       path: selected,
     })
       .then((entries) => {
-        console.log(entries);
         workspaceStore.folder = selected;
         workspaceStore.entries = entries;
       })
@@ -67,10 +68,10 @@ async function open_folder() {
 }
 
 async function save_current() {
-  invoke("save_buffer", {
+  invoke<string>("save_buffer", {
     bufferIdx: editorStore.bufferIdx,
   })
-    .then((success) => {
+    .then(() => {
       console.log("File saved successfully");
     })
     .catch((error) => {
@@ -82,11 +83,11 @@ async function save_as() {
   const selected = await save();
   if (selected !== null) {
     // user selected a single file
-    invoke("save_buffer_to_new_file", {
+    invoke<string>("save_buffer_to_new_file", {
       bufferIdx: editorStore.bufferIdx,
       path: selected,
     })
-      .then((success) => {
+      .then(() => {
         console.log("File saved successfully");
       })
       .catch((error) => {

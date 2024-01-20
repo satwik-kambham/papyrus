@@ -5,31 +5,38 @@ import { useWorkspaceStore } from "../stores/workspace";
 import { useEditorStore } from "../stores/editor";
 import { useStatusStore } from "../stores/status";
 import { readText, writeText } from "@tauri-apps/api/clipboard";
+import { FileEntry } from "@tauri-apps/api/fs";
 
 const workspaceStore = useWorkspaceStore();
 const statusStore = useStatusStore();
 const editorStore = useEditorStore();
 
-const gutterElement = ref(null);
-const editorElement = ref(null);
-const cursorElement = ref(null);
-const dummyElement = ref(null);
-const hiddenInput = ref(null);
+const gutterElement = ref<HTMLElement | null>(null);
+const editorElement = ref<HTMLElement | null>(null);
+const cursorElement = ref<HTMLElement | null>(null);
+const dummyElement = ref<HTMLElement | null>(null);
+const hiddenInput = ref<HTMLElement | null>(null);
 
-const currentLine = ref(null);
-const currentGutterLine = ref(null);
+const currentLine = ref<Element | null>(null);
+const currentGutterLine = ref<Element | null>(null);
 const hOffset = ref(0);
 const vOffset = ref(0);
 const cursorHOffset = ref(0);
 const cursorVOffset = ref(0);
-const selectionHighlights = ref([]);
+const selectionHighlights = ref<
+  {
+    vOffset: number;
+    startHOffset: number;
+    endHOffset: number;
+  }[]
+>([]);
 
 let selecting = false;
 
 const gutterWidth = ref(0);
 
 onUpdated(() => {
-  gutterWidth.value = gutterElement.value?.clientWidth;
+  gutterWidth.value = gutterElement.value?.clientWidth ?? 0;
 });
 
 // Setting cursor width based on a dummy element
@@ -76,21 +83,21 @@ class AsyncQueue {
 const asyncQueue = new AsyncQueue();
 
 // Clamp value to the range from min to max
-function clamp(value, min, max) {
+function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
 // Scroll wheel event handler
-function wheel_event(e) {
+function wheel_event(e: WheelEvent) {
   hOffset.value = clamp(
     hOffset.value - e.deltaX * 0.5,
-    -e.currentTarget.clientWidth + e.currentTarget.parentNode.clientWidth,
+    -e.currentTarget!.clientWidth + e.currentTarget!.parentNode.clientWidth,
     0,
   );
 
   vOffset.value = clamp(
     vOffset.value - e.deltaY * 0.5,
-    -e.currentTarget.clientHeight + e.currentTarget.parentNode.clientHeight,
+    -e.currentTarget!.clientHeight + e.currentTarget!.parentNode.clientHeight,
     0,
   );
 }
@@ -103,39 +110,42 @@ function selection_made() {
 }
 
 // Calculate offsets given row and column
-async function calculateOffsets(row, column) {
+async function calculateOffsets(
+  row: number,
+  column: number,
+): Promise<number[]> {
   let tempColumn = column;
-  let tokens = editorElement.value.children[row].firstChild.children;
+  let tokens = editorElement.value!.children[row].firstChild?.childNodes ?? [];
   let currentToken = null;
   for (let i = 0; i < tokens.length; i++) {
     const element = tokens[i];
-    if (tempColumn <= element.textContent.length) {
+    if (tempColumn <= (element.textContent?.length ?? 0)) {
       currentToken = element;
       break;
     }
-    tempColumn -= element.textContent.length;
+    tempColumn -= element.textContent?.length ?? 0;
   }
 
-  if (currentToken.firstChild != null) {
+  if (currentToken!.firstChild != null) {
     let range = document.createRange();
-    range.setStart(currentToken.firstChild, 0);
-    range.setEnd(currentToken.firstChild, tempColumn);
+    range.setStart(currentToken!.firstChild, 0);
+    range.setEnd(currentToken!.firstChild, tempColumn);
 
-    const verticalOffset = editorElement.value.children[row].offsetTop;
+    const verticalOffset = editorElement.value!.children[row].offsetTop;
     const horizontalOffset =
       range.getBoundingClientRect().right -
-      cursorElement.value?.parentNode.offsetLeft -
+      cursorElement.value?.parentNode!.offsetLeft -
       hOffset.value;
     return [verticalOffset, horizontalOffset];
   } else {
-    const verticalOffset = editorElement.value.children[row].offsetTop;
+    const verticalOffset = editorElement.value!.children[row].offsetTop;
     const horizontalOffset = 0;
     return [verticalOffset, horizontalOffset];
   }
 }
 
 // Set cursor position at given row and column
-async function setCursorPosition(row, column) {
+async function setCursorPosition(row: number, column: number) {
   await nextTick();
 
   const cursorOffsets = await calculateOffsets(row, column);
@@ -144,11 +154,11 @@ async function setCursorPosition(row, column) {
 
   if (currentLine.value != null) {
     currentLine.value.classList.remove("bg-atom-bg-light");
-    currentGutterLine.value.classList.remove("bg-atom-bg-light");
-    currentGutterLine.value.classList.remove("text-atom-text-dark");
+    currentGutterLine.value!.classList.remove("bg-atom-bg-light");
+    currentGutterLine.value!.classList.remove("text-atom-text-dark");
   }
-  currentLine.value = editorElement.value.children[row];
-  currentGutterLine.value = gutterElement.value.children[row];
+  currentLine.value = editorElement.value!.children[row];
+  currentGutterLine.value = gutterElement.value!.children[row];
 
   let highlights = [];
   if (selection_made()) {
@@ -215,7 +225,7 @@ async function setCursorPosition(row, column) {
   hiddenInput.value?.focus();
 }
 
-function get_mouse_position(e) {
+function get_mouse_position(e: MouseEvent) {
   let range;
   let textNode;
   let offset;
@@ -244,11 +254,11 @@ function get_mouse_position(e) {
     // If user clicked on text
     // Calculating row and column
     row = Math.floor(
-      e.target.parentNode.offsetTop / e.target.parentNode.clientHeight,
+      e.target!.parentNode.offsetTop / e.target!.parentNode.clientHeight,
     );
 
     let children = Array.from(
-      editorElement.value.children[row].firstChild.children,
+      editorElement.value!.children[row].firstChild!.children,
     );
     let current = children.indexOf(textNode.parentNode);
     column = offset;
@@ -259,7 +269,7 @@ function get_mouse_position(e) {
   } else if (textNode?.nodeType === 1) {
     // If user clicked outside the text
     // Calculating row
-    row = Math.floor(e.target.offsetTop / e.target.clientHeight);
+    row = Math.floor(e.target!.offsetTop / e.target!.clientHeight);
     if (offset != 0) {
       // If user did not click on the outer editor div
       // Setting column to end of line
@@ -274,7 +284,7 @@ function get_mouse_position(e) {
 }
 
 // Insert character after cursor
-async function insert_character(character) {
+async function insert_character(character: string) {
   if (selection_made()) {
     await remove_character();
   }
@@ -418,7 +428,7 @@ async function get_selected_text() {
       end: end,
     };
 
-    let selected_text = await invoke("get_selected_text", {
+    let selected_text = await invoke<string>("get_selected_text", {
       bufferIdx: editorStore.bufferIdx,
       selection: s,
     });
@@ -429,15 +439,15 @@ async function get_selected_text() {
 
 // Get lines length (total rows)
 async function get_lines_length() {
-  let lines_length = await invoke("get_lines_length", {
+  let lines_length = await invoke<number>("get_lines_length", {
     bufferIdx: editorStore.bufferIdx,
   });
   return lines_length;
 }
 
 // Get row length
-async function get_row_length(row_number) {
-  let row_length = await await invoke("get_row_length", {
+async function get_row_length(row_number: number) {
+  let row_length = await invoke<number>("get_row_length", {
     bufferIdx: editorStore.bufferIdx,
     row: row_number,
   });
@@ -546,7 +556,7 @@ async function move_cursor_line_end() {
 }
 
 // Mouse click event handler
-async function mouse_down(e) {
+async function mouse_down(e: MouseEvent) {
   e.preventDefault();
   selecting = true;
 
@@ -562,7 +572,7 @@ async function mouse_down(e) {
 }
 
 // Mouse click event handler
-async function mouse_move(e) {
+async function mouse_move(e: MouseEvent) {
   e.preventDefault();
 
   if (selecting) {
@@ -577,7 +587,7 @@ async function mouse_move(e) {
 }
 
 // Mouse click event handler
-async function mouse_up(e) {
+async function mouse_up(e: MouseEvent) {
   e.preventDefault();
   selecting = false;
 
@@ -591,7 +601,7 @@ async function mouse_up(e) {
 }
 
 // Keyboard event handler
-async function key_event(e) {
+async function key_event(e: KeyboardEvent) {
   e.preventDefault();
 
   await asyncQueue.enqueue(async () => {
@@ -601,7 +611,7 @@ async function key_event(e) {
         await writeText(selected_text);
       } else if (e.key === "v") {
         const t = await readText();
-        await insert_character(t);
+        await insert_character(t ?? "");
       } else if (e.key === "x") {
         let removed_text = await remove_character();
         await writeText(removed_text);
@@ -651,21 +661,21 @@ function resetState() {
   statusStore.startCursorColumn = 0;
 }
 
-async function switchBuffer(entry) {
+async function switchBuffer(entry: FileEntry) {
   workspaceStore.selectedEntry = entry.path;
   await asyncQueue.enqueue(async () => {
     resetState();
-    invoke("create_buffer_from_file_path", { path: entry.path })
+    invoke<number>("create_buffer_from_file_path", { path: entry.path })
       .then((buffer_idx) => {
         statusStore.encoding = "utf8";
         editorStore.bufferIdx = buffer_idx;
-        invoke("get_highlighted_text", {
+        invoke<IHighlightedText>("get_highlighted_text", {
           bufferIdx: editorStore.bufferIdx,
         }).then((content) => {
           editorStore.content = content.text;
         });
       })
-      .catch(() => {
+      .catch((error) => {
         statusStore.encoding = "Unknown";
         console.error(error);
       });
@@ -679,7 +689,7 @@ async function switchBuffer(entry) {
         class="px-2 py-1 border-x-2 border-atom-bg-light whitespace-nowrap cursor-pointer select-none"
         v-for="(entry, index) in workspaceStore.openEditors"
         :key="index"
-        @click="async (e) => await switchBuffer(entry)"
+        @click="async () => await switchBuffer(entry)"
         :class="{
           'bg-atom-bg-light': entry.path == workspaceStore.selectedEntry,
         }"
@@ -699,7 +709,7 @@ async function switchBuffer(entry) {
         >
           <div
             class="px-5"
-            v-for="(line, index) in editorStore.content"
+            v-for="(_, index) in editorStore.content"
             :key="index"
           >
             <span class="inline-block">
@@ -718,7 +728,11 @@ async function switchBuffer(entry) {
           @mouseup="mouse_up"
           :style="{ top: vOffset + 'px', left: hOffset + 'px' }"
         >
-          <div class="" v-for="line in editorStore.content">
+          <div
+            class=""
+            v-for="(line, index) in editorStore.content"
+            :key="index"
+          >
             <span class="inline-block">
               <span
                 :class="['whitespace-pre', 'text-atom-highlight-' + token[0]]"
