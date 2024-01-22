@@ -80,11 +80,12 @@ async function switchBuffer(index: number) {
         editorStore.bufferIdx = buffer_idx;
         invoke<IHighlightedText>("get_highlighted_text", {
           bufferIdx: editorStore.bufferIdx,
-        }).then((content) => {
+        }).then(async (content) => {
           editorStore.highlightedContent = content.text;
+
+          const s = workspaceStore.currentSelection;
+          await setCursorPosition(s.end.row, s.end.column);
         });
-        const s = workspaceStore.currentSelection;
-        setCursorPosition(s.end.row, s.end.column);
       })
       .catch((error) => {
         editorStore.encoding = "Unknown";
@@ -716,7 +717,10 @@ async function key_event(e: KeyboardEvent) {
 }
 </script>
 <template>
-  <div class="flex flex-col h-full">
+  <div
+    class="flex flex-col h-full"
+    v-if="workspaceStore.currentEditorIndex != -1"
+  >
     <div class="flex overflow-auto custom-scrollbar z-30 bg-atom-bg">
       <div
         class="px-2 py-1 border-x-2 border-atom-bg-light whitespace-nowrap cursor-pointer select-none"
