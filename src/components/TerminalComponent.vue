@@ -111,7 +111,9 @@ const unlisten = await appWindow.listen(
 
 workspaceStore.$onAction((context) => {
   context.after(() => {
-    fitAddon.fit();
+    if (context.name === "resized") {
+      fitAddon.fit();
+    }
   });
 });
 

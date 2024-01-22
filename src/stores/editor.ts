@@ -2,8 +2,11 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 
 export const useEditorStore = defineStore("editor", () => {
-  const content = ref<Array<Array<string>>>([]);
+  const fileEntry = ref<IFileEntry | null>(null);
+  const highlightedContent = ref<Array<Array<string>>>([]);
   const bufferIdx = ref(-1);
+  const language = ref("Unknown");
+  const encoding = ref("utf-8");
 
-  return { content, bufferIdx };
+  return { fileEntry, highlightedContent, bufferIdx, language, encoding };
 });

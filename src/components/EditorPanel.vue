@@ -3,13 +3,12 @@ import { computed, ref, nextTick, onUpdated } from "vue";
 import { invoke } from "@tauri-apps/api";
 import { useWorkspaceStore } from "../stores/workspace";
 import { useEditorStore } from "../stores/editor";
-import { useStatusStore } from "../stores/status";
+import { useSettingsStore } from "../stores/settings";
 import { readText, writeText } from "@tauri-apps/api/clipboard";
-import { FileEntry } from "@tauri-apps/api/fs";
 
 const workspaceStore = useWorkspaceStore();
-const statusStore = useStatusStore();
 const editorStore = useEditorStore();
+const settingsStore = useSettingsStore();
 
 const gutterElement = ref<HTMLElement | null>(null);
 const editorElement = ref<HTMLElement | null>(null);
@@ -46,6 +45,53 @@ const cursorWidth = computed(() => {
 const cursorHeight = computed(() => {
   return dummyElement.value?.offsetHeight;
 });
+
+function resetState() {
+  if (currentLine.value != null)
+    currentLine.value!.classList.remove("bg-atom-bg-light");
+  if (currentGutterLine.value != null) {
+    currentGutterLine.value!.classList.remove("bg-atom-bg-light");
+    currentGutterLine.value!.classList.remove("text-atom-text-dark");
+  }
+
+  currentLine.value = null;
+  currentGutterLine.value = null;
+  hOffset.value = 0;
+  vOffset.value = 0;
+  cursorHOffset.value = 0;
+  cursorVOffset.value = 0;
+  selectionHighlights.value = [];
+
+  selecting = false;
+
+  gutterWidth.value = 0;
+}
+
+async function switchBuffer(index: number) {
+  await asyncQueue.enqueue(async () => {
+    resetState();
+    workspaceStore.currentEditorIndex = index;
+    invoke<number>("create_buffer_from_file_path", {
+      path: workspaceStore.openEditors[index].entry?.path,
+    })
+      .then((buffer_idx) => {
+        editorStore.fileEntry = workspaceStore.openEditors[index].entry!;
+        editorStore.encoding = "utf8";
+        editorStore.bufferIdx = buffer_idx;
+        invoke<IHighlightedText>("get_highlighted_text", {
+          bufferIdx: editorStore.bufferIdx,
+        }).then((content) => {
+          editorStore.highlightedContent = content.text;
+        });
+        const s = workspaceStore.currentSelection;
+        setCursorPosition(s.end.row, s.end.column);
+      })
+      .catch((error) => {
+        editorStore.encoding = "Unknown";
+        console.error(error);
+      });
+  });
+}
 
 class AsyncQueue {
   constructor() {
@@ -103,10 +149,8 @@ function wheel_event(e: WheelEvent) {
 }
 
 function selection_made() {
-  return (
-    statusStore.startCursorRow != statusStore.cursorRow ||
-    statusStore.startCursorColumn != statusStore.cursorColumn
-  );
+  const s = workspaceStore.currentSelection;
+  return s.start.row != s.end.row || s.start.column != s.end.column;
 }
 
 // Calculate offsets given row and column
@@ -162,14 +206,9 @@ async function setCursorPosition(row: number, column: number) {
 
   let highlights = [];
   if (selection_made()) {
-    let start = {
-      row: statusStore.startCursorRow,
-      column: statusStore.startCursorColumn,
-    };
-    let end = {
-      row: statusStore.cursorRow,
-      column: statusStore.cursorColumn,
-    };
+    const s = workspaceStore.currentSelection;
+    let start = s.start;
+    let end = s.end;
 
     if (
       start.row > end.row ||
@@ -285,6 +324,7 @@ function get_mouse_position(e: MouseEvent) {
 
 // Insert character after cursor
 async function insert_character(character: string) {
+  const s = workspaceStore.currentSelection;
   if (selection_made()) {
     await remove_character();
   }
@@ -292,30 +332,33 @@ async function insert_character(character: string) {
     bufferIdx: editorStore.bufferIdx,
     text: character,
     cursor: {
-      row: statusStore.cursorRow,
-      column: statusStore.cursorColumn,
+      row: s.end.row,
+      column: s.end.column,
     },
   });
-  editorStore.content = update[0].text;
-  statusStore.cursorRow = update[1].row;
-  statusStore.cursorColumn = update[1].column;
-  statusStore.startCursorRow = update[1].row;
-  statusStore.startCursorColumn = update[1].column;
+  editorStore.highlightedContent = update[0].text;
+  workspaceStore.updateSelection(
+    update[1].row,
+    update[1].column,
+    update[1].row,
+    update[1].column,
+  );
   await setCursorPosition(update[1].row, update[1].column);
 }
 
 // Remove character before cursor
 async function remove_character() {
-  if (statusStore.cursorRow != 0 || statusStore.cursorColumn != 0) {
+  const sel = workspaceStore.currentSelection;
+  if (sel.end.row != 0 || sel.end.column != 0) {
     let s;
     if (selection_made()) {
       let start = {
-        row: statusStore.startCursorRow,
-        column: statusStore.startCursorColumn,
+        row: sel.start.row,
+        column: sel.start.column,
       };
       let end = {
-        row: statusStore.cursorRow,
-        column: statusStore.cursorColumn,
+        row: sel.end.row,
+        column: sel.end.column,
       };
 
       if (
@@ -332,26 +375,26 @@ async function remove_character() {
         end: end,
       };
     } else {
-      if (statusStore.cursorColumn != 0) {
+      if (sel.end.column != 0) {
         s = {
           start: {
-            row: statusStore.cursorRow,
-            column: statusStore.cursorColumn - 1,
+            row: sel.end.row,
+            column: sel.end.column - 1,
           },
           end: {
-            row: statusStore.cursorRow,
-            column: statusStore.cursorColumn,
+            row: sel.end.row,
+            column: sel.end.column,
           },
         };
       } else {
-        let prev_row_length = await get_row_length(statusStore.cursorRow - 1);
+        let prev_row_length = await get_row_length(sel.end.row - 1);
         s = {
           start: {
-            row: statusStore.cursorRow - 1,
+            row: sel.end.row - 1,
             column: prev_row_length,
           },
           end: {
-            row: statusStore.cursorRow,
+            row: sel.end.row,
             column: 0,
           },
         };
@@ -361,12 +404,14 @@ async function remove_character() {
       bufferIdx: editorStore.bufferIdx,
       selection: s,
     });
-    editorStore.content = update[0].text;
+    editorStore.highlightedContent = update[0].text;
     let removed_text = update[1];
-    statusStore.cursorRow = update[2].row;
-    statusStore.cursorColumn = update[2].column;
-    statusStore.startCursorRow = update[2].row;
-    statusStore.startCursorColumn = update[2].column;
+    workspaceStore.updateSelection(
+      update[2].row,
+      update[2].column,
+      update[2].row,
+      update[2].column,
+    );
     await setCursorPosition(update[2].row, update[2].column);
     return removed_text;
   }
@@ -378,11 +423,13 @@ async function undo() {
     bufferIdx: editorStore.bufferIdx,
   });
   if (update != null) {
-    editorStore.content = update[0].text;
-    statusStore.cursorRow = update[1].row;
-    statusStore.cursorColumn = update[1].column;
-    statusStore.startCursorRow = update[1].row;
-    statusStore.startCursorColumn = update[1].column;
+    editorStore.highlightedContent = update[0].text;
+    workspaceStore.updateSelection(
+      update[1].row,
+      update[1].column,
+      update[1].row,
+      update[1].column,
+    );
     await setCursorPosition(update[1].row, update[1].column);
   }
 }
@@ -393,11 +440,13 @@ async function redo() {
     bufferIdx: editorStore.bufferIdx,
   });
   if (update != null) {
-    editorStore.content = update[0].text;
-    statusStore.cursorRow = update[1].row;
-    statusStore.cursorColumn = update[1].column;
-    statusStore.startCursorRow = update[1].row;
-    statusStore.startCursorColumn = update[1].column;
+    editorStore.highlightedContent = update[0].text;
+    workspaceStore.updateSelection(
+      update[1].row,
+      update[1].column,
+      update[1].row,
+      update[1].column,
+    );
     await setCursorPosition(update[1].row, update[1].column);
   }
 }
@@ -405,14 +454,9 @@ async function redo() {
 // Remove character before cursor
 async function get_selected_text() {
   if (selection_made()) {
-    let start = {
-      row: statusStore.startCursorRow,
-      column: statusStore.startCursorColumn,
-    };
-    let end = {
-      row: statusStore.cursorRow,
-      column: statusStore.cursorColumn,
-    };
+    let sel = workspaceStore.currentSelection;
+    let start = sel.start;
+    let end = sel.end;
 
     if (
       start.row > end.row ||
@@ -456,103 +500,123 @@ async function get_row_length(row_number: number) {
 
 // Move cursor up
 async function move_cursor_up() {
-  if (statusStore.cursorRow == 0) {
+  const s = workspaceStore.currentSelection;
+  if (s.end.row == 0) {
     await move_cursor_line_start();
   } else {
-    statusStore.cursorRow -= 1;
-    let column = Math.min(
-      statusStore.cursorColumn,
-      await get_row_length(statusStore.cursorRow),
+    let column = Math.min(s.end.column, await get_row_length(s.end.row - 1));
+    workspaceStore.updateSelection(
+      s.end.row - 1,
+      column,
+      s.end.row - 1,
+      column,
     );
-    statusStore.cursorColumn = column;
-    statusStore.startCursorRow = statusStore.cursorRow;
-    statusStore.startCursorColumn = column;
-    await setCursorPosition(statusStore.cursorRow, column);
+    await setCursorPosition(s.end.row - 1, column);
   }
 }
 
 // Move cursor down
 async function move_cursor_down() {
-  if (statusStore.cursorRow == (await get_lines_length()) - 1) {
+  const s = workspaceStore.currentSelection;
+  if (s.end.row == (await get_lines_length()) - 1) {
     await move_cursor_line_end();
   } else {
-    statusStore.cursorRow += 1;
-    let column = Math.min(
-      statusStore.cursorColumn,
-      await get_row_length(statusStore.cursorRow),
+    let column = Math.min(s.end.column, await get_row_length(s.end.row + 1));
+    workspaceStore.updateSelection(
+      s.end.row + 1,
+      column,
+      s.end.row + 1,
+      column,
     );
-    statusStore.cursorColumn = column;
-    statusStore.startCursorRow = statusStore.cursorRow;
-    statusStore.startCursorColumn = column;
-    await setCursorPosition(statusStore.cursorRow, column);
+    await setCursorPosition(s.end.row + 1, column);
   }
 }
 
 // Move cursor left
 async function move_cursor_left() {
+  const s = workspaceStore.currentSelection;
   if (selection_made()) {
-    statusStore.startCursorRow = statusStore.cursorRow;
-    statusStore.startCursorColumn = statusStore.cursorColumn;
-    await setCursorPosition(statusStore.cursorRow, statusStore.cursorColumn);
+    workspaceStore.updateSelection(
+      s.end.row,
+      s.end.column,
+      s.end.row,
+      s.end.column,
+    );
+    await setCursorPosition(s.end.row, s.end.column);
   } else {
-    if (statusStore.cursorColumn == 0) {
+    if (s.end.column == 0) {
       // Move to end of previous line
-      if (statusStore.cursorRow != 0) {
-        statusStore.cursorRow -= 1;
-        let column = await get_row_length(statusStore.cursorRow);
-        statusStore.cursorColumn = column;
-        statusStore.startCursorRow = statusStore.cursorRow;
-        statusStore.startCursorColumn = column;
-        await setCursorPosition(statusStore.cursorRow, column);
+      if (s.end.row != 0) {
+        const column = await get_row_length(s.end.row - 1);
+        workspaceStore.updateSelection(
+          s.end.row - 1,
+          column,
+          s.end.row - 1,
+          column,
+        );
+        await setCursorPosition(s.end.row - 1, column);
       }
     } else {
-      statusStore.cursorColumn -= 1;
-      statusStore.startCursorColumn = statusStore.cursorColumn;
-      await setCursorPosition(statusStore.cursorRow, statusStore.cursorColumn);
+      workspaceStore.updateSelection(
+        s.end.row,
+        s.end.column - 1,
+        s.end.row,
+        s.end.column - 1,
+      );
+      await setCursorPosition(s.end.row, s.end.column - 1);
     }
   }
 }
 
 // Move cursor right
 async function move_cursor_right() {
+  const s = workspaceStore.currentSelection;
   if (selection_made()) {
-    statusStore.startCursorRow = statusStore.cursorRow;
-    statusStore.startCursorColumn = statusStore.cursorColumn;
-    await setCursorPosition(statusStore.cursorRow, statusStore.cursorColumn);
+    workspaceStore.updateSelection(
+      s.end.row,
+      s.end.column,
+      s.end.row,
+      s.end.column,
+    );
+    await setCursorPosition(s.end.row, s.end.column);
   } else {
-    if (
-      statusStore.cursorColumn == (await get_row_length(statusStore.cursorRow))
-    ) {
+    if (s.end.column == (await get_row_length(s.end.row))) {
       // Move to start of next line
-      if (statusStore.cursorRow != (await get_lines_length()) - 1) {
-        let column = 0;
-        statusStore.cursorRow += 1;
-        statusStore.cursorColumn = column;
-        statusStore.startCursorRow = statusStore.cursorRow;
-        statusStore.startCursorColumn = column;
-        await setCursorPosition(statusStore.cursorRow, column);
+      if (s.end.row != (await get_lines_length()) - 1) {
+        const column = 0;
+        workspaceStore.updateSelection(
+          s.end.row + 1,
+          column,
+          s.end.row + 1,
+          column,
+        );
+        await setCursorPosition(s.end.row + 1, column);
       }
     } else {
-      statusStore.cursorColumn += 1;
-      statusStore.startCursorColumn = statusStore.cursorColumn;
-      await setCursorPosition(statusStore.cursorRow, statusStore.cursorColumn);
+      workspaceStore.updateSelection(
+        s.end.row,
+        s.end.column + 1,
+        s.end.row,
+        s.end.column + 1,
+      );
+      await setCursorPosition(s.end.row, s.end.column + 1);
     }
   }
 }
 
 // Move cursor to start of line
 async function move_cursor_line_start() {
-  statusStore.cursorColumn = 0;
-  statusStore.startCursorColumn = 0;
-  await setCursorPosition(statusStore.cursorRow, 0);
+  const s = workspaceStore.currentSelection;
+  workspaceStore.updateSelection(s.end.row, 0, s.end.row, 0);
+  await setCursorPosition(s.end.row, 0);
 }
 
 // Move cursor to end of line
 async function move_cursor_line_end() {
-  let column = await get_row_length(statusStore.cursorRow);
-  statusStore.cursorColumn = column;
-  statusStore.startCursorColumn = column;
-  await setCursorPosition(statusStore.cursorRow, column);
+  const s = workspaceStore.currentSelection;
+  let column = await get_row_length(s.end.row);
+  workspaceStore.updateSelection(s.end.row, column, s.end.row, column);
+  await setCursorPosition(s.end.row, column);
 }
 
 // Mouse click event handler
@@ -562,11 +626,12 @@ async function mouse_down(e: MouseEvent) {
 
   await asyncQueue.enqueue(async () => {
     let position = get_mouse_position(e);
-
-    statusStore.startCursorRow = position.row;
-    statusStore.startCursorColumn = position.column;
-    statusStore.cursorRow = position.row;
-    statusStore.cursorColumn = position.column;
+    workspaceStore.updateSelection(
+      position.row,
+      position.column,
+      position.row,
+      position.column,
+    );
     await setCursorPosition(position.row, position.column);
   });
 }
@@ -578,9 +643,13 @@ async function mouse_move(e: MouseEvent) {
   if (selecting) {
     await asyncQueue.enqueue(async () => {
       let position = get_mouse_position(e);
-
-      statusStore.cursorRow = position.row;
-      statusStore.cursorColumn = position.column;
+      const s = workspaceStore.currentSelection;
+      workspaceStore.updateSelection(
+        s.start.row,
+        s.start.column,
+        position.row,
+        position.column,
+      );
       await setCursorPosition(position.row, position.column);
     });
   }
@@ -593,9 +662,13 @@ async function mouse_up(e: MouseEvent) {
 
   await asyncQueue.enqueue(async () => {
     let position = get_mouse_position(e);
-
-    statusStore.cursorRow = position.row;
-    statusStore.cursorColumn = position.column;
+    const s = workspaceStore.currentSelection;
+    workspaceStore.updateSelection(
+      s.start.row,
+      s.start.column,
+      position.row,
+      position.column,
+    );
     await setCursorPosition(position.row, position.column);
   });
 }
@@ -641,60 +714,20 @@ async function key_event(e: KeyboardEvent) {
     }
   });
 }
-
-function resetState() {
-  currentLine.value = null;
-  currentGutterLine.value = null;
-  hOffset.value = 0;
-  vOffset.value = 0;
-  cursorHOffset.value = 0;
-  cursorVOffset.value = 0;
-  selectionHighlights.value = [];
-
-  selecting = false;
-
-  gutterWidth.value = 0;
-
-  statusStore.cursorRow = 0;
-  statusStore.cursorColumn = 0;
-  statusStore.startCursorRow = 0;
-  statusStore.startCursorColumn = 0;
-}
-
-async function switchBuffer(entry: FileEntry) {
-  workspaceStore.selectedEntry = entry.path;
-  await asyncQueue.enqueue(async () => {
-    resetState();
-    invoke<number>("create_buffer_from_file_path", { path: entry.path })
-      .then((buffer_idx) => {
-        statusStore.encoding = "utf8";
-        editorStore.bufferIdx = buffer_idx;
-        invoke<IHighlightedText>("get_highlighted_text", {
-          bufferIdx: editorStore.bufferIdx,
-        }).then((content) => {
-          editorStore.content = content.text;
-        });
-      })
-      .catch((error) => {
-        statusStore.encoding = "Unknown";
-        console.error(error);
-      });
-  });
-}
 </script>
 <template>
   <div class="flex flex-col h-full">
     <div class="flex overflow-auto custom-scrollbar z-30 bg-atom-bg">
       <div
         class="px-2 py-1 border-x-2 border-atom-bg-light whitespace-nowrap cursor-pointer select-none"
-        v-for="(entry, index) in workspaceStore.openEditors"
+        v-for="(editor, index) in workspaceStore.openEditors"
         :key="index"
-        @click="async () => await switchBuffer(entry)"
+        @click="async () => await switchBuffer(index)"
         :class="{
-          'bg-atom-bg-light': entry.path == workspaceStore.selectedEntry,
+          'bg-atom-bg-light': index == workspaceStore.currentEditorIndex,
         }"
       >
-        {{ entry.name }}
+        {{ editor.entry?.name }}
       </div>
     </div>
     <div class="flex h-full">
@@ -709,7 +742,7 @@ async function switchBuffer(entry: FileEntry) {
         >
           <div
             class="px-5"
-            v-for="(_, index) in editorStore.content"
+            v-for="(_, index) in editorStore.highlightedContent"
             :key="index"
           >
             <span class="inline-block">
@@ -730,7 +763,7 @@ async function switchBuffer(entry: FileEntry) {
         >
           <div
             class=""
-            v-for="(line, index) in editorStore.content"
+            v-for="(line, index) in editorStore.highlightedContent"
             :key="index"
           >
             <span class="inline-block">

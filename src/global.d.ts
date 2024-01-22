@@ -13,3 +13,23 @@ declare interface IHighlightedText {
 declare interface ITerminalPayload {
   output: string;
 }
+
+declare interface OpenEditor {
+  entry?: IFileEntry;
+  unsavedChanges: boolean;
+  content?: string;
+  selection: {
+    start: {
+      row: number;
+      column: number;
+    };
+    end: {
+      row: number;
+      column: number;
+    };
+  };
+  scroll: {
+    hOffset: number;
+    vOffset: number;
+  };
+}

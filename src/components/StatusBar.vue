@@ -1,17 +1,27 @@
 <script setup lang="ts">
-import { useStatusStore } from "../stores/status";
+import { useEditorStore } from "../stores/editor";
+import { useWorkspaceStore } from "../stores/workspace";
 
-const statusStore = useStatusStore();
+const editorStore = useEditorStore();
+const workspaceStore = useWorkspaceStore();
 </script>
 
 <template>
   <div class="bg-atom-bg-dark flex p-1 text-sm select-none">
     <div>Status Bar</div>
     <div class="grow"></div>
-    <div class="px-1">
-      Ln {{ statusStore.cursorRow + 1 }} : Col
-      {{ statusStore.cursorColumn + 1 }}
+    <div class="px-1" v-if="workspaceStore.currentEditorIndex != -1">
+      Ln
+      {{
+        workspaceStore.openEditors[workspaceStore.currentEditorIndex].selection
+          .end.row + 1
+      }}
+      : Col
+      {{
+        workspaceStore.openEditors[workspaceStore.currentEditorIndex].selection
+          .end.column + 1
+      }}
     </div>
-    <div class="px-1">{{ statusStore.encoding }}</div>
+    <div class="px-1">{{ editorStore.encoding }}</div>
   </div>
 </template>

@@ -2,13 +2,11 @@
 import { open, save } from "@tauri-apps/api/dialog";
 import { invoke } from "@tauri-apps/api";
 import { useWorkspaceStore } from "../stores/workspace";
-import { useStatusStore } from "../stores/status";
 import { useEditorStore } from "../stores/editor";
 import { appWindow } from "@tauri-apps/api/window";
 
 const workspaceStore = useWorkspaceStore();
 const editorStore = useEditorStore();
-const statusStore = useStatusStore();
 
 async function open_file() {
   const selected = await open({
@@ -20,27 +18,50 @@ async function open_file() {
       path: selected,
     })
       .then(async (buffer_idx) => {
-        const fileInfo = await invoke<IFileEntry>("get_file_info", {
+        editorStore.bufferIdx = buffer_idx;
+        editorStore.encoding = "utf-8";
+        const fileEntry = await invoke<IFileEntry>("get_file_info", {
           path: selected,
         });
+
         let entryExists = false;
-        workspaceStore.openEditors.forEach((entry) => {
-          if (entry.path == fileInfo.path) entryExists = true;
+        workspaceStore.openEditors.forEach((openEditor, index) => {
+          if (openEditor.entry?.path == fileEntry.path) {
+            entryExists = true;
+            workspaceStore.currentEditorIndex = index;
+          }
         });
         if (!entryExists) {
-          workspaceStore.openEditors.push(fileInfo);
+          workspaceStore.openEditors.push({
+            entry: fileEntry,
+            unsavedChanges: false,
+            selection: {
+              start: {
+                row: 0,
+                column: 0,
+              },
+              end: {
+                row: 0,
+                column: 0,
+              },
+            },
+            scroll: {
+              hOffset: 0,
+              vOffset: 0,
+            },
+          });
+          workspaceStore.currentEditorIndex =
+            workspaceStore.openEditors.length - 1;
         }
-        workspaceStore.selectedEntry = selected;
-        statusStore.encoding = "utf8";
-        editorStore.bufferIdx = buffer_idx;
+
         invoke<IHighlightedText>("get_highlighted_text", {
           bufferIdx: editorStore.bufferIdx,
         }).then((content) => {
-          editorStore.content = content.text;
+          editorStore.highlightedContent = content.text;
         });
       })
       .catch((error) => {
-        statusStore.encoding = "Unknown";
+        editorStore.encoding = "Unknown";
         console.error(error);
       });
   }
@@ -58,8 +79,8 @@ async function open_folder() {
       path: selected,
     })
       .then((entries) => {
-        workspaceStore.folder = selected;
-        workspaceStore.entries = entries;
+        workspaceStore.workspaceFolder = selected;
+        workspaceStore.folderEntries = entries;
       })
       .catch((error) => {
         console.error(error);
@@ -102,6 +123,7 @@ async function minimize() {
 
 async function maximize() {
   await appWindow.toggleMaximize();
+  workspaceStore.resized();
   workspaceStore.maximized = await appWindow.isMaximized();
 }
 

@@ -1,15 +1,46 @@
 import { defineStore } from "pinia";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
 export const useWorkspaceStore = defineStore("workspace", () => {
-  const folder = ref("");
-  const entries = ref<Array<IFileEntry>>([]);
-
+  // Window
   const maximized = ref(false);
+  const windowDimensions = ref({ width: 1280, height: 720 });
+
   function resized() {}
 
-  const openEditors = ref<Array<IFileEntry>>([]);
-  const selectedEntry = ref<string | null>(null);
+  // Workspace
+  const workspaceFolder = ref<string | null>(null);
+  const folderEntries = ref<Array<IFileEntry>>([]);
 
-  return { folder, entries, maximized, resized, openEditors, selectedEntry };
+  // Open editors
+  const currentEditorIndex = ref(-1);
+  const openEditors = ref<Array<OpenEditor>>([]);
+
+  const currentSelection = computed(
+    () => openEditors.value[currentEditorIndex.value].selection,
+  );
+
+  function updateSelection(
+    start_row: number,
+    start_column: number,
+    end_row: number,
+    end_column: number,
+  ) {
+    openEditors.value[currentEditorIndex.value].selection = {
+      start: { row: start_row, column: start_column },
+      end: { row: end_row, column: end_column },
+    };
+  }
+
+  return {
+    maximized,
+    windowDimensions,
+    resized,
+    workspaceFolder,
+    folderEntries,
+    currentEditorIndex,
+    openEditors,
+    currentSelection,
+    updateSelection,
+  };
 });

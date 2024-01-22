@@ -3,39 +3,60 @@ import { invoke } from "@tauri-apps/api";
 
 import TreeView from "./TreeView.vue";
 import { useWorkspaceStore } from "../stores/workspace";
-import { useStatusStore } from "../stores/status";
 import { useEditorStore } from "../stores/editor";
 
 const workspaceStore = useWorkspaceStore();
 const editorStore = useEditorStore();
-const statusStore = useStatusStore();
 
 function clickItem(index: number, entries: Array<IFileEntry>) {
   const entry = entries[index];
   if (!entry.is_dir) {
     invoke<number>("create_buffer_from_file_path", { path: entry.path })
       .then(async (buffer_idx) => {
-        const fileInfo = await invoke<IFileEntry>("get_file_info", {
+        editorStore.bufferIdx = buffer_idx;
+        editorStore.encoding = "utf-8";
+        const fileEntry = await invoke<IFileEntry>("get_file_info", {
           path: entry.path,
         });
+
         let entryExists = false;
-        workspaceStore.openEditors.forEach((entry) => {
-          if (entry.path == fileInfo.path) entryExists = true;
+        workspaceStore.openEditors.forEach((openEditor, index) => {
+          if (openEditor.entry?.path == fileEntry.path) {
+            entryExists = true;
+            workspaceStore.currentEditorIndex = index;
+          }
         });
         if (!entryExists) {
-          workspaceStore.openEditors.push(fileInfo);
+          workspaceStore.openEditors.push({
+            entry: fileEntry,
+            unsavedChanges: false,
+            selection: {
+              start: {
+                row: 0,
+                column: 0,
+              },
+              end: {
+                row: 0,
+                column: 0,
+              },
+            },
+            scroll: {
+              hOffset: 0,
+              vOffset: 0,
+            },
+          });
+          workspaceStore.currentEditorIndex =
+            workspaceStore.openEditors.length - 1;
         }
-        workspaceStore.selectedEntry = entry.path;
-        statusStore.encoding = "utf8";
-        editorStore.bufferIdx = buffer_idx;
+
         invoke<IHighlightedText>("get_highlighted_text", {
           bufferIdx: editorStore.bufferIdx,
         }).then((content) => {
-          editorStore.content = content.text;
+          editorStore.highlightedContent = content.text;
         });
       })
       .catch((error) => {
-        statusStore.encoding = "Unknown";
+        editorStore.encoding = "Unknown";
         console.error(error);
       });
   } else {
@@ -61,7 +82,7 @@ function clickItem(index: number, entries: Array<IFileEntry>) {
     <div class="border-atom-text-dark border-b-2 text-justify p-1">Project</div>
     <div class="text-sm">
       <TreeView
-        :entries="workspaceStore.entries"
+        :entries="workspaceStore.folderEntries"
         :click-handler="clickItem"
       ></TreeView>
     </div>
