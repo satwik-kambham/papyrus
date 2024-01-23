@@ -16,6 +16,10 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   const currentEditorIndex = ref(-1);
   const openEditors = ref<Array<OpenEditor>>([]);
 
+  function switchEditor(index: number) {
+    currentEditorIndex.value = index;
+  }
+
   const currentSelection = computed(
     () => openEditors.value[currentEditorIndex.value].selection,
   );
@@ -40,6 +44,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     folderEntries,
     currentEditorIndex,
     openEditors,
+    switchEditor,
     currentSelection,
     updateSelection,
   };

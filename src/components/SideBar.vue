@@ -23,7 +23,7 @@ function clickItem(index: number, entries: Array<IFileEntry>) {
         workspaceStore.openEditors.forEach((openEditor, index) => {
           if (openEditor.entry?.path == fileEntry.path) {
             entryExists = true;
-            workspaceStore.currentEditorIndex = index;
+            workspaceStore.switchEditor(index);
           }
         });
         if (!entryExists) {
@@ -45,8 +45,7 @@ function clickItem(index: number, entries: Array<IFileEntry>) {
               vOffset: 0,
             },
           });
-          workspaceStore.currentEditorIndex =
-            workspaceStore.openEditors.length - 1;
+          workspaceStore.switchEditor(workspaceStore.openEditors.length - 1);
         }
 
         invoke<IHighlightedText>("get_highlighted_text", {

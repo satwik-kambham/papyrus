@@ -28,7 +28,7 @@ async function open_file() {
         workspaceStore.openEditors.forEach((openEditor, index) => {
           if (openEditor.entry?.path == fileEntry.path) {
             entryExists = true;
-            workspaceStore.currentEditorIndex = index;
+            workspaceStore.switchEditor(index);
           }
         });
         if (!entryExists) {
@@ -50,8 +50,7 @@ async function open_file() {
               vOffset: 0,
             },
           });
-          workspaceStore.currentEditorIndex =
-            workspaceStore.openEditors.length - 1;
+          workspaceStore.switchEditor(workspaceStore.openEditors.length - 1);
         }
 
         invoke<IHighlightedText>("get_highlighted_text", {

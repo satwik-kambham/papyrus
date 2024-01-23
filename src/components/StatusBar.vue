@@ -12,15 +12,9 @@ const workspaceStore = useWorkspaceStore();
     <div class="grow"></div>
     <div class="px-1" v-if="workspaceStore.currentEditorIndex != -1">
       Ln
-      {{
-        workspaceStore.openEditors[workspaceStore.currentEditorIndex].selection
-          .end.row + 1
-      }}
+      {{ workspaceStore.currentSelection.end.row + 1 }}
       : Col
-      {{
-        workspaceStore.openEditors[workspaceStore.currentEditorIndex].selection
-          .end.column + 1
-      }}
+      {{ workspaceStore.currentSelection.end.column + 1 }}
     </div>
     <div class="px-1">{{ editorStore.encoding }}</div>
   </div>

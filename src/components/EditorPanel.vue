@@ -70,7 +70,6 @@ function resetState() {
 async function switchBuffer(index: number) {
   await asyncQueue.enqueue(async () => {
     resetState();
-    workspaceStore.currentEditorIndex = index;
     invoke<number>("create_buffer_from_file_path", {
       path: workspaceStore.openEditors[index].entry?.path,
     })
@@ -93,6 +92,28 @@ async function switchBuffer(index: number) {
       });
   });
 }
+
+async function closeBuffer(index: number) {
+  workspaceStore.openEditors.splice(index, 1);
+  if (workspaceStore.openEditors.length == 0) {
+    workspaceStore.currentEditorIndex = -1;
+    editorStore.bufferIdx = -1;
+    editorStore.fileEntry = null;
+    editorStore.encoding = "Unknown";
+    editorStore.language = "Unknown";
+    editorStore.highlightedContent = [];
+  } else {
+    workspaceStore.switchEditor(0);
+  }
+}
+
+workspaceStore.$onAction((context) => {
+  context.after(async () => {
+    if (context.name === "switchEditor") {
+      await switchBuffer(workspaceStore.currentEditorIndex);
+    }
+  });
+});
 
 class AsyncQueue {
   constructor() {
@@ -723,15 +744,26 @@ async function key_event(e: KeyboardEvent) {
   >
     <div class="flex overflow-auto custom-scrollbar z-30 bg-atom-bg">
       <div
-        class="px-2 py-1 border-x-2 border-atom-bg-light whitespace-nowrap cursor-pointer select-none"
+        class="px-2 py-1 border-x-2 border-atom-bg-light whitespace-nowrap cursor-pointer select-none flex"
         v-for="(editor, index) in workspaceStore.openEditors"
         :key="index"
-        @click="async () => await switchBuffer(index)"
+        @click="() => workspaceStore.switchEditor(index)"
         :class="{
           'bg-atom-bg-light': index == workspaceStore.currentEditorIndex,
         }"
       >
         {{ editor.entry?.name }}
+        <div
+          class="px-1 text-atom-text-light hover:text-atom-text mx-1"
+          @click="
+            async (e) => {
+              e.stopPropagation();
+              await closeBuffer(index);
+            }
+          "
+        >
+          x
+        </div>
       </div>
     </div>
     <div class="flex h-full">
