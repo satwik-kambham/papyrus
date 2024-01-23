@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { PropType, ref } from "vue";
 
-const selectedIndex = ref<number | null>(null);
-
 const props = defineProps({
   entries: {
     type: Array<IFileEntry>,
@@ -17,7 +15,6 @@ const props = defineProps({
 });
 
 function clickItem(index: number, entries: Array<IFileEntry>) {
-  selectedIndex.value = index;
   props.clickHandler(index, entries);
 }
 </script>
@@ -31,9 +28,6 @@ function clickItem(index: number, entries: Array<IFileEntry>) {
     <div
       class="flex hover:bg-atom-bg-light cursor-pointer"
       @click="clickItem(index, props.entries)"
-      :class="{
-        'bg-atom-bg-light': selectedIndex === index,
-      }"
     >
       <img
         class="pl-1 pr-2"
