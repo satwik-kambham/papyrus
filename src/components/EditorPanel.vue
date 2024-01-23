@@ -372,6 +372,8 @@ async function insert_character(character: string) {
     update[1].column,
   );
   await setCursorPosition(update[1].row, update[1].column);
+  workspaceStore.openEditors[workspaceStore.currentEditorIndex].unsavedChanges =
+    true;
 }
 
 // Remove character before cursor
@@ -443,6 +445,8 @@ async function remove_character() {
     await setCursorPosition(update[2].row, update[2].column);
     return removed_text;
   }
+  workspaceStore.openEditors[workspaceStore.currentEditorIndex].unsavedChanges =
+    true;
 }
 
 // Undo last action
@@ -460,6 +464,8 @@ async function undo() {
     );
     await setCursorPosition(update[1].row, update[1].column);
   }
+  workspaceStore.openEditors[workspaceStore.currentEditorIndex].unsavedChanges =
+    true;
 }
 
 // Redo last action
@@ -477,6 +483,8 @@ async function redo() {
     );
     await setCursorPosition(update[1].row, update[1].column);
   }
+  workspaceStore.openEditors[workspaceStore.currentEditorIndex].unsavedChanges =
+    true;
 }
 
 // Remove character before cursor
@@ -759,6 +767,12 @@ async function key_event(e: KeyboardEvent) {
         }"
       >
         {{ editor.entry?.name }}
+        <div
+          class="px-1 text-atom-primary"
+          v-if="workspaceStore.openEditors[index].unsavedChanges"
+        >
+          U
+        </div>
         <div
           class="px-1 text-atom-text-light hover:text-atom-text mx-1"
           @click="

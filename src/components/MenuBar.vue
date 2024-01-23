@@ -92,6 +92,7 @@ async function save_current() {
     bufferIdx: editorStore.bufferIdx,
   })
     .then(() => {
+      workspaceStore.openEditors[workspaceStore.currentEditorIndex].unsavedChanges = false;
       console.log("File saved successfully");
     })
     .catch((error) => {
