@@ -81,7 +81,9 @@ async function switchBuffer(index: number) {
           bufferIdx: editorStore.bufferIdx,
         }).then(async (content) => {
           editorStore.highlightedContent = content.text;
-
+          const scroll = workspaceStore.openEditors[index].scroll;
+          hOffset.value = scroll.hOffset;
+          vOffset.value = scroll.vOffset;
           const s = workspaceStore.currentSelection;
           await setCursorPosition(s.end.row, s.end.column);
         });
@@ -168,6 +170,10 @@ function wheel_event(e: WheelEvent) {
     -e.currentTarget!.clientHeight + e.currentTarget!.parentNode.clientHeight,
     0,
   );
+  workspaceStore.openEditors[workspaceStore.currentEditorIndex].scroll = {
+    hOffset: hOffset.value,
+    vOffset: vOffset.value,
+  };
 }
 
 function selection_made() {
