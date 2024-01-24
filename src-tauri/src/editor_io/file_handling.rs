@@ -1,11 +1,12 @@
 use std::{
+    cmp::Ordering,
     error::Error,
     fs::{self, File},
     io::{Read, Write},
     path::Path,
 };
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct FolderEntry {
     path: String,
     is_dir: bool,
@@ -18,6 +19,22 @@ pub struct FileEntry {
     path: String,
     name: String,
     extension: String,
+}
+
+impl PartialOrd for FolderEntry {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for FolderEntry {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Prioritize is_dir, then name
+        other
+            .is_dir
+            .cmp(&self.is_dir)
+            .then_with(|| self.name.to_lowercase().cmp(&other.name.to_lowercase()))
+    }
 }
 
 impl FileEntry {
@@ -86,6 +103,7 @@ pub fn get_folder_content(path: &str) -> Result<Vec<FolderEntry>, Box<dyn Error>
         };
         entries.push(folder_entry);
     }
+    entries.sort();
 
     Ok(entries)
 }
