@@ -8,6 +8,7 @@ export default {
       },
       colors: {
         atom: {
+          "black": "#181a1f",
           "bg-dark": "#21252b",
           bg: "#282c34",
           "bg-light": "#2c313c",

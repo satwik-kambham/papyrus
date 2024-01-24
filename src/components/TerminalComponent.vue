@@ -124,7 +124,7 @@ onUnmounted(() => {
 
 <template>
   <div
-    class="w-full h-full bg-atom-bg overflow-hidden border-t-4 border-atom-bg-light"
+    class="w-full h-full bg-atom-bg overflow-hidden border-t-[1px] border-atom-black"
   >
     <div class="w-full h-full custom-scrollbar" ref="terminalElement"></div>
   </div>

@@ -77,9 +77,9 @@ function clickItem(index: number, entries: Array<IFileEntry>) {
 </script>
 
 <template>
-  <div class="bg-atom-bg-dark h-full select-none">
-    <div class="border-atom-text-dark border-b-2 text-justify p-1">Project</div>
-    <div class="text-sm">
+  <div class="bg-atom-bg-dark h-full select-none flex flex-col border-r-[1px] border-atom-black">
+    <div class="border-atom-bg border-b-[0.5px] text-center p-1">Project</div>
+    <div class="grow overflow-auto custom-scrollbar">
       <TreeView
         :entries="workspaceStore.folderEntries"
         :click-handler="clickItem"

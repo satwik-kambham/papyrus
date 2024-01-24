@@ -759,14 +759,15 @@ async function key_event(e: KeyboardEvent) {
     class="flex flex-col h-full"
     v-if="workspaceStore.currentEditorIndex != -1"
   >
-    <div class="flex overflow-auto custom-scrollbar z-30 bg-atom-bg">
+    <div class="flex overflow-x-auto custom-scrollbar z-30 bg-atom-bg-dark border-b-[1px] border-atom-black">
       <div
-        class="px-2 py-1 border-x-2 border-atom-bg-light whitespace-nowrap cursor-pointer select-none flex"
+        class="px-2 py-2 border-r-[1px] min-w-52 justify-center flex-shrink-0 border-r-atom-black whitespace-nowrap cursor-pointer select-none flex"
         v-for="(editor, index) in workspaceStore.openEditors"
         :key="index"
         @click="() => workspaceStore.switchEditor(index)"
         :class="{
-          'bg-atom-bg-light': index == workspaceStore.currentEditorIndex,
+          'bg-atom-bg text-atom-text border-l-2 border-atom-highlight': index == workspaceStore.currentEditorIndex,
+          'text-atom-text-light': index != workspaceStore.currentEditorIndex,
         }"
       >
         {{ editor.entry?.name }}
