@@ -18,7 +18,7 @@ export const useSettingsStore = defineStore("settings", () => {
     "Consolas, ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
   );
   const editorTheme = ref("");
-  const tabSize = ref(4);
+  const tabSize = ref(2);
   const autoSave = ref(AutoSaveType.OFF);
   const autoSaveDelay = ref(1000);
   const eolSequence = ref(EOLSequence.LF);

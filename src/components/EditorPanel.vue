@@ -733,6 +733,9 @@ async function key_event(e: KeyboardEvent) {
       let key = e.key;
       if (key === "Enter") key = "\n";
       await insert_character(key);
+    } else if (e.key === "Tab") {
+      const spacing = " ".repeat(settingsStore.tabSize);
+      await insert_character(spacing);
     } else if (e.key === "Backspace") {
       await remove_character();
     } else if (e.key === "ArrowUp") {
