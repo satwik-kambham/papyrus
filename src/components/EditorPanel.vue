@@ -84,8 +84,7 @@ async function switchBuffer(index: number) {
           const scroll = workspaceStore.openEditors[index].scroll;
           hOffset.value = scroll.hOffset;
           vOffset.value = scroll.vOffset;
-          const s = workspaceStore.currentSelection;
-          await setCursorPosition(s.end.row, s.end.column);
+          await setCursorPosition(true);
         });
       })
       .catch((error) => {
@@ -217,10 +216,11 @@ async function calculateOffsets(
 }
 
 // Set cursor position at given row and column
-async function setCursorPosition(row: number, column: number) {
+async function setCursorPosition(selectionChanged: boolean) {
   await nextTick();
 
-  const cursorOffsets = await calculateOffsets(row, column);
+  const s = workspaceStore.currentSelection;
+  const cursorOffsets = await calculateOffsets(s.end.row, s.end.column);
   cursorVOffset.value = cursorOffsets[0];
   cursorHOffset.value = cursorOffsets[1];
 
@@ -229,12 +229,11 @@ async function setCursorPosition(row: number, column: number) {
     currentGutterLine.value!.classList.remove("bg-atom-bg-light");
     currentGutterLine.value!.classList.remove("text-atom-text-dark");
   }
-  currentLine.value = editorElement.value!.children[row];
-  currentGutterLine.value = gutterElement.value!.children[row];
+  currentLine.value = editorElement.value!.children[s.end.row];
+  currentGutterLine.value = gutterElement.value!.children[s.end.row];
 
-  let highlights = [];
-  if (selection_made()) {
-    const s = workspaceStore.currentSelection;
+  if (selectionChanged && selection_made()) {
+    let highlights = [];
     let start = s.start;
     let end = s.end;
 
@@ -282,12 +281,16 @@ async function setCursorPosition(row: number, column: number) {
         endHOffset: endOffsets[1],
       });
     }
+
+    selectionHighlights.value = highlights;
+  } else if (!selectionChanged) {
+    /* empty */
   } else {
     currentLine.value.classList.add("bg-atom-bg-light");
     currentGutterLine.value.classList.add("bg-atom-bg-light");
     currentGutterLine.value.classList.add("text-atom-text-dark");
+    selectionHighlights.value = [];
   }
-  selectionHighlights.value = highlights;
 
   hiddenInput.value?.focus();
 }
@@ -365,13 +368,13 @@ async function insert_character(character: string) {
     },
   });
   editorStore.highlightedContent = update[0].text;
-  workspaceStore.updateSelection(
+  const changed = workspaceStore.updateSelection(
     update[1].row,
     update[1].column,
     update[1].row,
     update[1].column,
   );
-  await setCursorPosition(update[1].row, update[1].column);
+  await setCursorPosition(changed);
   workspaceStore.openEditors[workspaceStore.currentEditorIndex].unsavedChanges =
     true;
 }
@@ -436,13 +439,13 @@ async function remove_character() {
     });
     editorStore.highlightedContent = update[0].text;
     let removed_text = update[1];
-    workspaceStore.updateSelection(
+    const changed = workspaceStore.updateSelection(
       update[2].row,
       update[2].column,
       update[2].row,
       update[2].column,
     );
-    await setCursorPosition(update[2].row, update[2].column);
+    await setCursorPosition(changed);
     return removed_text;
   }
   workspaceStore.openEditors[workspaceStore.currentEditorIndex].unsavedChanges =
@@ -456,13 +459,13 @@ async function undo() {
   });
   if (update != null) {
     editorStore.highlightedContent = update[0].text;
-    workspaceStore.updateSelection(
+    const changed = workspaceStore.updateSelection(
       update[1].row,
       update[1].column,
       update[1].row,
       update[1].column,
     );
-    await setCursorPosition(update[1].row, update[1].column);
+    await setCursorPosition(changed);
   }
   workspaceStore.openEditors[workspaceStore.currentEditorIndex].unsavedChanges =
     true;
@@ -475,13 +478,13 @@ async function redo() {
   });
   if (update != null) {
     editorStore.highlightedContent = update[0].text;
-    workspaceStore.updateSelection(
+    const changed = workspaceStore.updateSelection(
       update[1].row,
       update[1].column,
       update[1].row,
       update[1].column,
     );
-    await setCursorPosition(update[1].row, update[1].column);
+    await setCursorPosition(changed);
   }
   workspaceStore.openEditors[workspaceStore.currentEditorIndex].unsavedChanges =
     true;
@@ -541,13 +544,13 @@ async function move_cursor_up() {
     await move_cursor_line_start();
   } else {
     let column = Math.min(s.end.column, await get_row_length(s.end.row - 1));
-    workspaceStore.updateSelection(
+    const changed = workspaceStore.updateSelection(
       s.end.row - 1,
       column,
       s.end.row - 1,
       column,
     );
-    await setCursorPosition(s.end.row - 1, column);
+    await setCursorPosition(changed);
   }
 }
 
@@ -558,13 +561,13 @@ async function move_cursor_down() {
     await move_cursor_line_end();
   } else {
     let column = Math.min(s.end.column, await get_row_length(s.end.row + 1));
-    workspaceStore.updateSelection(
+    const changed = workspaceStore.updateSelection(
       s.end.row + 1,
       column,
       s.end.row + 1,
       column,
     );
-    await setCursorPosition(s.end.row + 1, column);
+    await setCursorPosition(changed);
   }
 }
 
@@ -572,34 +575,34 @@ async function move_cursor_down() {
 async function move_cursor_left() {
   const s = workspaceStore.currentSelection;
   if (selection_made()) {
-    workspaceStore.updateSelection(
+    const changed = workspaceStore.updateSelection(
       s.end.row,
       s.end.column,
       s.end.row,
       s.end.column,
     );
-    await setCursorPosition(s.end.row, s.end.column);
+    await setCursorPosition(changed);
   } else {
     if (s.end.column == 0) {
       // Move to end of previous line
       if (s.end.row != 0) {
         const column = await get_row_length(s.end.row - 1);
-        workspaceStore.updateSelection(
+        const changed = workspaceStore.updateSelection(
           s.end.row - 1,
           column,
           s.end.row - 1,
           column,
         );
-        await setCursorPosition(s.end.row - 1, column);
+        await setCursorPosition(changed);
       }
     } else {
-      workspaceStore.updateSelection(
+      const changed = workspaceStore.updateSelection(
         s.end.row,
         s.end.column - 1,
         s.end.row,
         s.end.column - 1,
       );
-      await setCursorPosition(s.end.row, s.end.column - 1);
+      await setCursorPosition(changed);
     }
   }
 }
@@ -608,34 +611,34 @@ async function move_cursor_left() {
 async function move_cursor_right() {
   const s = workspaceStore.currentSelection;
   if (selection_made()) {
-    workspaceStore.updateSelection(
+    const changed = workspaceStore.updateSelection(
       s.end.row,
       s.end.column,
       s.end.row,
       s.end.column,
     );
-    await setCursorPosition(s.end.row, s.end.column);
+    await setCursorPosition(changed);
   } else {
     if (s.end.column == (await get_row_length(s.end.row))) {
       // Move to start of next line
       if (s.end.row != (await get_lines_length()) - 1) {
         const column = 0;
-        workspaceStore.updateSelection(
+        const changed = workspaceStore.updateSelection(
           s.end.row + 1,
           column,
           s.end.row + 1,
           column,
         );
-        await setCursorPosition(s.end.row + 1, column);
+        await setCursorPosition(changed);
       }
     } else {
-      workspaceStore.updateSelection(
+      const changed = workspaceStore.updateSelection(
         s.end.row,
         s.end.column + 1,
         s.end.row,
         s.end.column + 1,
       );
-      await setCursorPosition(s.end.row, s.end.column + 1);
+      await setCursorPosition(changed);
     }
   }
 }
@@ -643,16 +646,21 @@ async function move_cursor_right() {
 // Move cursor to start of line
 async function move_cursor_line_start() {
   const s = workspaceStore.currentSelection;
-  workspaceStore.updateSelection(s.end.row, 0, s.end.row, 0);
-  await setCursorPosition(s.end.row, 0);
+  const changed = workspaceStore.updateSelection(s.end.row, 0, s.end.row, 0);
+  await setCursorPosition(changed);
 }
 
 // Move cursor to end of line
 async function move_cursor_line_end() {
   const s = workspaceStore.currentSelection;
   let column = await get_row_length(s.end.row);
-  workspaceStore.updateSelection(s.end.row, column, s.end.row, column);
-  await setCursorPosition(s.end.row, column);
+  const changed = workspaceStore.updateSelection(
+    s.end.row,
+    column,
+    s.end.row,
+    column,
+  );
+  await setCursorPosition(changed);
 }
 
 // Mouse click event handler
@@ -662,13 +670,13 @@ async function mouse_down(e: MouseEvent) {
 
   await asyncQueue.enqueue(async () => {
     let position = get_mouse_position(e);
-    workspaceStore.updateSelection(
+    const changed = workspaceStore.updateSelection(
       position.row,
       position.column,
       position.row,
       position.column,
     );
-    await setCursorPosition(position.row, position.column);
+    await setCursorPosition(changed);
   });
 }
 
@@ -680,13 +688,15 @@ async function mouse_move(e: MouseEvent) {
     await asyncQueue.enqueue(async () => {
       let position = get_mouse_position(e);
       const s = workspaceStore.currentSelection;
-      workspaceStore.updateSelection(
+      const changed = workspaceStore.updateSelection(
         s.start.row,
         s.start.column,
         position.row,
         position.column,
       );
-      await setCursorPosition(position.row, position.column);
+      if (changed) console.log(changed);
+
+      await setCursorPosition(changed);
     });
   }
 }
@@ -699,13 +709,13 @@ async function mouse_up(e: MouseEvent) {
   await asyncQueue.enqueue(async () => {
     let position = get_mouse_position(e);
     const s = workspaceStore.currentSelection;
-    workspaceStore.updateSelection(
+    const changed = workspaceStore.updateSelection(
       s.start.row,
       s.start.column,
       position.row,
       position.column,
     );
-    await setCursorPosition(position.row, position.column);
+    await setCursorPosition(changed);
   });
 }
 
