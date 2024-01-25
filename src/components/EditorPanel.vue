@@ -286,10 +286,13 @@ async function setCursorPosition(selectionChanged: boolean) {
   } else if (!selectionChanged) {
     /* empty */
   } else {
-    currentLine.value.classList.add("bg-atom-bg-light");
-    currentGutterLine.value.classList.add("bg-atom-bg-light");
-    currentGutterLine.value.classList.add("text-atom-text-dark");
     selectionHighlights.value = [];
+  }
+
+  if (!selection_made()) {
+    currentLine.value.classList.add("bg-atom-bg-light");
+    currentGutterLine.value.classList.add("text-atom-text-dark");
+    currentGutterLine.value.classList.add("text-atom-text-dark");
   }
 
   hiddenInput.value?.focus();
