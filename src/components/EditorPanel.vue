@@ -700,7 +700,6 @@ async function mouse_move(e: MouseEvent) {
         position.row,
         position.column,
       );
-      if (changed) console.log(changed);
 
       await setCursorPosition(changed);
     });
@@ -845,7 +844,7 @@ async function key_event(e: KeyboardEvent) {
             v-for="(line, index) in editorStore.highlightedContent"
             :key="index"
           >
-            <span class="inline-block">
+            <span class="inline-block whitespace-pre">
               <span
                 :class="['whitespace-pre', 'text-atom-highlight-' + token[0]]"
                 v-for="(token, index) in line"
