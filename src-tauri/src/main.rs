@@ -26,6 +26,7 @@ async fn main() {
             commands::resize_pty,
             commands::get_folder_content,
             commands::create_buffer_from_file_path,
+            commands::delete_buffer,
             commands::get_highlighted_text,
             commands::insert_text,
             commands::remove_text,

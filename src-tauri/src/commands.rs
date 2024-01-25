@@ -100,6 +100,13 @@ pub fn create_buffer_from_file_path(path: String) -> Result<usize, String> {
 }
 
 #[tauri::command]
+pub fn delete_buffer(buffer_idx: usize) -> Result<String, String> {
+    let mut editor_state = EDITOR_STATE.get().lock().unwrap();
+    editor_state.text_buffers.remove(buffer_idx);
+    Ok("Success".into())
+}
+
+#[tauri::command]
 pub fn save_buffer(buffer_idx: usize) -> Result<String, String> {
     let editor_state = EDITOR_STATE.get().lock().unwrap();
     let content = editor_state.text_buffers[buffer_idx].get_content();

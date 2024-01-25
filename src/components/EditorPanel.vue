@@ -95,6 +95,9 @@ async function switchBuffer(index: number) {
 }
 
 async function closeBuffer(index: number) {
+  await invoke("delete_buffer", {
+    bufferIdx: editorStore.bufferIdx,
+  });
   workspaceStore.openEditors.splice(index, 1);
   if (workspaceStore.openEditors.length == 0) {
     workspaceStore.currentEditorIndex = -1;
