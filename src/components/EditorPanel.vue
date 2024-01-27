@@ -452,10 +452,11 @@ async function remove_character() {
       update[2].column,
     );
     await setCursorPosition(changed);
+    workspaceStore.openEditors[
+      workspaceStore.currentEditorIndex
+    ].unsavedChanges = true;
     return removed_text;
   }
-  workspaceStore.openEditors[workspaceStore.currentEditorIndex].unsavedChanges =
-    true;
 }
 
 // Undo last action
