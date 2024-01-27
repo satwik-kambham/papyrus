@@ -70,6 +70,10 @@ impl LineTextBuffer {
     pub fn from_file(initial_text: String, path: String) -> Self {
         let mut lines: Vec<String> = initial_text.lines().map(String::from).collect();
 
+        if lines.len() == 0 {
+            lines.push("".into());
+        }
+
         if initial_text.ends_with("\n") && !initial_text.ends_with("\\n") {
             lines.push("".into());
         }
@@ -180,7 +184,7 @@ impl LineTextBuffer {
 
         let mut current_token = tokens_iter.next();
         let mut current_line = lines_iter.next().unwrap();
-        while cursor.row < end_cursor.row || cursor.column < end_cursor.column {
+        while cursor.row <= end_cursor.row || cursor.column < end_cursor.column {
             match current_token {
                 Some((current_range, kind)) => {
                     if cursor.row <= current_range.start_point.row
@@ -212,12 +216,15 @@ impl LineTextBuffer {
                         highlighted_line
                             .push((mapping.get_highlight_type(&kind), token_slice.to_string()));
                         cursor.column = end_range;
-                        if cursor.row < current_range.end_point.row {
+                        if cursor.row < current_range.end_point.row && cursor.row < end_cursor.row {
                             cursor.row += 1;
                             cursor.column = 0;
                             highlighted_text.text.push(highlighted_line);
                             highlighted_line = vec![];
                             current_line = lines_iter.next().unwrap();
+                        } else if cursor.row == end_cursor.row {
+                            highlighted_text.text.push(highlighted_line);
+                            break;
                         } else {
                             // Go to next token
                             current_token = tokens_iter.next();
@@ -240,6 +247,9 @@ impl LineTextBuffer {
                         highlighted_text.text.push(highlighted_line);
                         highlighted_line = vec![];
                         current_line = lines_iter.next().unwrap();
+                    } else if cursor.row == end_cursor.row {
+                        highlighted_text.text.push(highlighted_line);
+                        break;
                     }
                 }
             }
