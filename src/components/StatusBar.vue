@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { useEditorStore } from "../stores/editor";
 import { useWorkspaceStore } from "../stores/workspace";
+import { useSettingsStore } from "../stores/settings";
 
 const editorStore = useEditorStore();
 const workspaceStore = useWorkspaceStore();
+const settingsStore = useSettingsStore();
+
+function changeTabSpacing() {
+  settingsStore.tabSize = settingsStore.tabSize == 2 ? 4 : 2;
+}
 </script>
 
 <template>
@@ -14,12 +20,18 @@ const workspaceStore = useWorkspaceStore();
       {{ editorStore.fileEntry.name }}
     </div>
     <div class="grow"></div>
-    <div class="px-1" v-if="workspaceStore.currentEditorIndex != -1">
+    <div
+      class="px-1.5 hover:bg-atom-bg"
+      v-if="workspaceStore.currentEditorIndex != -1"
+    >
       Ln
       {{ workspaceStore.currentSelection.end.row + 1 }}
       : Col
       {{ workspaceStore.currentSelection.end.column + 1 }}
     </div>
-    <div class="px-1">{{ editorStore.encoding }}</div>
+    <div class="px-1.5 hover:bg-atom-bg" @click="changeTabSpacing">
+      {{ settingsStore.tabSize }} spaces
+    </div>
+    <div class="px-1.5 hover:bg-atom-bg">{{ editorStore.encoding }}</div>
   </div>
 </template>
