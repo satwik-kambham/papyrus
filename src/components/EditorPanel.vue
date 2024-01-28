@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, nextTick, onUpdated } from "vue";
+import { ref, watch, nextTick, onUpdated, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api";
 import { useWorkspaceStore } from "../stores/workspace";
 import { useEditorStore } from "../stores/editor";
@@ -35,15 +35,23 @@ let selecting = false;
 const gutterWidth = ref(0);
 
 onUpdated(() => {
-  gutterWidth.value = gutterElement.value?.clientWidth ?? 0;
+  gutterWidth.value = gutterElement.value?.getBoundingClientRect().width ?? 0;
 });
 
 // Setting cursor width based on a dummy element
-const cursorWidth = computed(() => {
-  return dummyElement.value?.offsetWidth;
+const cursorWidth = ref(0);
+const cursorHeight = ref(0);
+
+settingsStore.$subscribe(async (mutation, store) => {
+  await nextTick();
+  cursorWidth.value = dummyElement.value?.getBoundingClientRect().width;
+  cursorHeight.value = dummyElement.value?.getBoundingClientRect().height;
+  await setCursorPosition(true);
 });
-const cursorHeight = computed(() => {
-  return dummyElement.value?.offsetHeight;
+
+onMounted(() => {
+  cursorWidth.value = dummyElement.value?.getBoundingClientRect().width;
+  cursorHeight.value = dummyElement.value?.getBoundingClientRect().height;
 });
 
 function resetState() {
@@ -163,13 +171,15 @@ function clamp(value: number, min: number, max: number) {
 function wheel_event(e: WheelEvent) {
   hOffset.value = clamp(
     hOffset.value - e.deltaX * 0.5,
-    -e.currentTarget!.clientWidth + e.currentTarget!.parentNode.clientWidth,
+    -e.currentTarget!.getBoundingClientRect().width +
+      e.currentTarget!.parentNode.getBoundingClientRect().width,
     0,
   );
 
   vOffset.value = clamp(
     vOffset.value - e.deltaY * 0.5,
-    -e.currentTarget!.clientHeight + e.currentTarget!.parentNode.clientHeight,
+    -e.currentTarget!.getBoundingClientRect().height +
+      e.currentTarget!.parentNode.getBoundingClientRect().height,
     0,
   );
   workspaceStore.openEditors[workspaceStore.currentEditorIndex].scroll = {
@@ -208,7 +218,7 @@ async function calculateOffsets(
     const verticalOffset = editorElement.value!.children[row].offsetTop;
     const horizontalOffset =
       range.getBoundingClientRect().right -
-      cursorElement.value?.parentNode!.offsetLeft -
+      cursorElement.value?.parentNode!.getBoundingClientRect().left -
       hOffset.value;
     return [verticalOffset, horizontalOffset];
   } else {
@@ -330,7 +340,8 @@ function get_mouse_position(e: MouseEvent) {
     // If user clicked on text
     // Calculating row and column
     row = Math.floor(
-      e.target!.parentNode.offsetTop / e.target!.parentNode.clientHeight,
+      e.target!.parentNode.offsetTop /
+        e.target!.parentNode.getBoundingClientRect().height,
     );
 
     let children = Array.from(
@@ -345,7 +356,9 @@ function get_mouse_position(e: MouseEvent) {
   } else if (textNode?.nodeType === 1) {
     // If user clicked outside the text
     // Calculating row
-    row = Math.floor(e.target!.offsetTop / e.target!.clientHeight);
+    row = Math.floor(
+      e.target!.offsetTop / e.target!.getBoundingClientRect().height,
+    );
     if (offset != 0) {
       // If user did not click on the outer editor div
       // Setting column to end of line
@@ -816,8 +829,11 @@ async function key_event(e: KeyboardEvent) {
       >
         <div
           ref="gutterElement"
-          class="min-h-full font-code antialiased text-xl overflow-visible h-fit pointer-events-none select-none absolute w-fit text-atom-text-light"
-          :style="{ top: vOffset + 'px' }"
+          class="min-h-full font-code antialiased leading-normal overflow-visible h-fit pointer-events-none select-none absolute w-fit text-atom-text-light"
+          :style="{
+            top: vOffset + 'px',
+            'font-size': settingsStore.editorFontSize + 'px',
+          }"
         >
           <div
             class="px-5"
@@ -833,12 +849,16 @@ async function key_event(e: KeyboardEvent) {
       <div class="flex-1 h-full relative">
         <div
           ref="editorElement"
-          class="bg-transparent min-h-full font-code antialiased text-xl absolute min-w-full overflow-visible h-fit w-fit cursor-text z-10 select-none"
+          class="bg-transparent min-h-full font-code antialiased leading-normal absolute min-w-full overflow-visible h-fit w-fit cursor-text z-10 select-none"
           @wheel="wheel_event"
           @mousedown="mouse_down"
           @mousemove="mouse_move"
           @mouseup="mouse_up"
-          :style="{ top: vOffset + 'px', left: hOffset + 'px' }"
+          :style="{
+            top: vOffset + 'px',
+            left: hOffset + 'px',
+            'font-size': settingsStore.editorFontSize + 'px',
+          }"
         >
           <div
             class=""
@@ -858,12 +878,13 @@ async function key_event(e: KeyboardEvent) {
         </div>
         <div
           ref="cursorElement"
-          class="absolute font-code text-xl antialiased border-atom-primary border-l-2 pointer-events-none select-none animate-blink z-20"
+          class="absolute font-code antialiased leading-normal border-atom-primary border-l-2 pointer-events-none select-none animate-blink z-20"
           :style="{
             top: vOffset + cursorVOffset + 'px',
             left: hOffset + cursorHOffset + 'px',
             width: cursorWidth + 'px',
             height: cursorHeight + 'px',
+            'font-size': settingsStore.editorFontSize + 'px',
           }"
         >
           <input
@@ -880,7 +901,10 @@ async function key_event(e: KeyboardEvent) {
         </div>
         <div
           ref="highlightElement"
-          class="absolute font-code text-xl antialiased pointer-events-none select-none h-full w-full bg-atom-bg"
+          class="absolute font-code antialiased leading-normal pointer-events-none select-none h-full w-full bg-atom-bg"
+          :style="{
+            'font-size': settingsStore.editorFontSize + 'px',
+          }"
         >
           <div
             class="absolute bg-atom-highlight z-0"
@@ -895,8 +919,11 @@ async function key_event(e: KeyboardEvent) {
           ></div>
         </div>
         <div
-          class="absolute invisible whitespace-pre text-xl text-atom-highlight-None text-atom-highlight-White text-atom-highlight-Red text-atom-highlight-Orange text-atom-highlight-Blue text-atom-highlight-Green text-atom-highlight-Purple text-atom-highlight-Yellow text-atom-highlight-Gray text-atom-highlight-Turquoise"
+          class="absolute invisible whitespace-pre leading-normal text-atom-highlight-None text-atom-highlight-White text-atom-highlight-Red text-atom-highlight-Orange text-atom-highlight-Blue text-atom-highlight-Green text-atom-highlight-Purple text-atom-highlight-Yellow text-atom-highlight-Gray text-atom-highlight-Turquoise"
           ref="dummyElement"
+          :style="{
+            'font-size': settingsStore.editorFontSize + 'px',
+          }"
         >
           <span>x</span>
         </div>

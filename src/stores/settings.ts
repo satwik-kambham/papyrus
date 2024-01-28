@@ -13,7 +13,7 @@ enum AutoSaveType {
 }
 
 export const useSettingsStore = defineStore("settings", () => {
-  const editorFontSize = ref(16);
+  const editorFontSize = ref(28);
   const editorFontFamily = ref(
     "Consolas, ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
   );
