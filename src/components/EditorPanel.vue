@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, onUpdated, onMounted } from "vue";
+import { ref, watch, nextTick, onUpdated } from "vue";
 import { invoke } from "@tauri-apps/api";
 import { useWorkspaceStore } from "../stores/workspace";
 import { useEditorStore } from "../stores/editor";
@@ -49,11 +49,6 @@ settingsStore.$subscribe(async (mutation, store) => {
   await setCursorPosition(true);
 });
 
-onMounted(() => {
-  cursorWidth.value = dummyElement.value?.getBoundingClientRect().width;
-  cursorHeight.value = dummyElement.value?.getBoundingClientRect().height;
-});
-
 function resetState() {
   if (currentLine.value != null)
     currentLine.value!.classList.remove("bg-atom-bg-light");
@@ -92,6 +87,10 @@ async function switchBuffer(index: number) {
           const scroll = workspaceStore.openEditors[index].scroll;
           hOffset.value = scroll.hOffset;
           vOffset.value = scroll.vOffset;
+          cursorHeight.value =
+            dummyElement.value?.getBoundingClientRect().height;
+          cursorHeight.value =
+            dummyElement.value?.getBoundingClientRect().height;
           await setCursorPosition(true);
         });
       })

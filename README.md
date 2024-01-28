@@ -8,12 +8,14 @@ integrated terminal and more.
 ### Prerequisites
 
 You will need the following tools installed:
+
 - NodeJS
 - Rust
 
 Run `npm install` to install the necessary node dependencies
 
 Install the tauri cli using:
+
 ```bash
 cargo install tauri-cli
 ```
