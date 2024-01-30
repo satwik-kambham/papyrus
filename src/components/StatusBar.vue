@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useEditorStore } from "../stores/editor";
 import { useWorkspaceStore } from "../stores/workspace";
-import { useSettingsStore } from "../stores/settings";
+import { useSettingsStore, EOLSequence } from "../stores/settings";
 
 const editorStore = useEditorStore();
 const workspaceStore = useWorkspaceStore();
@@ -17,6 +17,13 @@ function increaseFontSize() {
 
 function decreaseFontSize() {
   settingsStore.editorFontSize -= 1;
+}
+
+function changeEOLSequence() {
+  settingsStore.eolSequence =
+    settingsStore.eolSequence == EOLSequence.LF
+      ? EOLSequence.CRLF
+      : EOLSequence.LF;
 }
 </script>
 
@@ -44,6 +51,10 @@ function decreaseFontSize() {
     </div>
     <div class="px-1.5 hover:bg-atom-bg" @click="changeTabSpacing">
       {{ settingsStore.tabSize }} spaces
+    </div>
+    <div class="px-1.5 hover:bg-atom-bg" @click="changeEOLSequence">
+      <div v-if="settingsStore.eolSequence == EOLSequence.LF">LF</div>
+      <div v-else>CRLF</div>
     </div>
     <div class="px-1.5 hover:bg-atom-bg">{{ editorStore.encoding }}</div>
   </div>

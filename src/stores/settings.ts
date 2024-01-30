@@ -1,12 +1,12 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 
-enum EOLSequence {
+export enum EOLSequence {
   CRLF = "\r\n",
   LF = "\n",
 }
 
-enum AutoSaveType {
+export enum AutoSaveType {
   OFF,
   ON_FOCUS_CHANGE,
   AFTER_DELAY,
@@ -21,7 +21,7 @@ export const useSettingsStore = defineStore("settings", () => {
   const tabSize = ref(2);
   const autoSave = ref(AutoSaveType.OFF);
   const autoSaveDelay = ref(1000);
-  const eolSequence = ref(EOLSequence.LF);
+  const eolSequence = ref(EOLSequence.CRLF);
 
   return {
     editorFontSize,

@@ -107,9 +107,9 @@ pub fn delete_buffer(buffer_idx: usize) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn save_buffer(buffer_idx: usize) -> Result<String, String> {
+pub fn save_buffer(buffer_idx: usize, eol_sequence: String) -> Result<String, String> {
     let editor_state = EDITOR_STATE.get().lock().unwrap();
-    let content = editor_state.text_buffers[buffer_idx].get_content();
+    let content = editor_state.text_buffers[buffer_idx].get_content(eol_sequence);
     let path = editor_state.text_buffers[buffer_idx]
         .file_path
         .as_ref()
@@ -120,9 +120,13 @@ pub fn save_buffer(buffer_idx: usize) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn save_buffer_to_new_file(buffer_idx: usize, path: String) -> Result<String, String> {
+pub fn save_buffer_to_new_file(
+    buffer_idx: usize,
+    path: String,
+    eol_sequence: String,
+) -> Result<String, String> {
     let editor_state = EDITOR_STATE.get().lock().unwrap();
-    let content = editor_state.text_buffers[buffer_idx].get_content();
+    let content = editor_state.text_buffers[buffer_idx].get_content(eol_sequence);
     file_handling::override_file_content(&path, content).map_err(|err| err.to_string())?;
 
     Ok("Success".into())

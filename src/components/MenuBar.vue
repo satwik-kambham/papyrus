@@ -3,10 +3,12 @@ import { open, save } from "@tauri-apps/api/dialog";
 import { invoke } from "@tauri-apps/api";
 import { useWorkspaceStore } from "../stores/workspace";
 import { useEditorStore } from "../stores/editor";
+import { useSettingsStore, EOLSequence } from "../stores/settings";
 import { appWindow } from "@tauri-apps/api/window";
 
 const workspaceStore = useWorkspaceStore();
 const editorStore = useEditorStore();
+const settingsStore = useSettingsStore();
 
 async function open_file() {
   const selected = await open({
@@ -90,6 +92,7 @@ async function open_folder() {
 async function save_current() {
   invoke<string>("save_buffer", {
     bufferIdx: editorStore.bufferIdx,
+    eolSequence: settingsStore.eolSequence,
   })
     .then(() => {
       workspaceStore.openEditors[
@@ -109,6 +112,7 @@ async function save_as() {
     invoke<string>("save_buffer_to_new_file", {
       bufferIdx: editorStore.bufferIdx,
       path: selected,
+      eolSequence: settingsStore.eolSequence,
     })
       .then(() => {
         console.log("File saved successfully");

@@ -89,8 +89,8 @@ impl LineTextBuffer {
         }
     }
 
-    pub fn get_content(&self) -> String {
-        let content = self.lines.join("\r\n");
+    pub fn get_content(&self, eol_sequence: String) -> String {
+        let content = self.lines.join(&eol_sequence);
         content
     }
 
