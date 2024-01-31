@@ -21,12 +21,12 @@ function clickItem(index: number, entries: Array<IFileEntry>) {
 
 <template>
   <div
-    class="py-0.5 px-1 flex flex-col"
+    class="flex flex-col"
     v-for="(entry, index) in props.entries"
     :key="index"
   >
     <div
-      class="flex hover:bg-atom-bg-light cursor-pointer"
+      class="flex hover:bg-atom-bg-light cursor-pointer pl-2 py-0.5"
       @click="clickItem(index, props.entries)"
     >
       <img
@@ -42,7 +42,7 @@ function clickItem(index: number, entries: Array<IFileEntry>) {
       />
       <div class="truncate">{{ entry.name }}</div>
     </div>
-    <div v-if="entry.entries != null" class="">
+    <div v-if="entry.entries != null" class="pl-4">
       <TreeView :entries="entry.entries" :click-handler="clickItem"></TreeView>
     </div>
   </div>

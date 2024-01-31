@@ -810,7 +810,7 @@ async function key_event(e: KeyboardEvent) {
         <div class="grow"></div>
 
         <div
-          class="px-1 text-atom-text-light hover:text-black hover:bg-atom-primary mx-1 rounded-sm"
+          class="px-1 text-atom-text hover:text-black hover:bg-atom-primary mx-1 rounded-sm"
           @click="
             async (e) => {
               e.stopPropagation();
@@ -819,7 +819,7 @@ async function key_event(e: KeyboardEvent) {
           "
         >
           <div
-            class="text-atom-primary w-2"
+            class="text-atom-primary w-2 mb-1.5"
             v-if="
               workspaceStore.openEditors[index].unsavedChanges &&
               hoverTabIndex != index
@@ -829,7 +829,7 @@ async function key_event(e: KeyboardEvent) {
           </div>
           <div
             v-else
-            class="transition transition-tranform transition-opacity duration-300 mb-1.5 w-2 text-center"
+            class="transition transition-tranform transition-opacity duration-500 mb-1.5 w-2 text-center"
             :class="{
               'opacity-100 scale-100': hoverTabIndex == index,
               'opacity-0 scale-0': hoverTabIndex != index,

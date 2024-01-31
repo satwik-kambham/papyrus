@@ -10,9 +10,9 @@ const workspaceStore = useWorkspaceStore();
 
 const isDragging = ref(false);
 const start = ref(0);
-const panelSize = ref(200);
+const panelSize = ref(250);
 
-let prevPanelSize = 200;
+let prevPanelSize = 250;
 
 function handleMouseDown(event: MouseEvent) {
   isDragging.value = true;

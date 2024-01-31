@@ -140,13 +140,30 @@ async function quit() {
 
 <template>
   <div data-tauri-drag-region class="bg-atom-bg-dark p-1 flex select-none">
-    <div class="pr-1 cursor-pointer" @click="open_file()">Open File</div>
-    <div class="pr-1 cursor-pointer" @click="open_folder()">Open Folder</div>
-    <div class="px-1 cursor-pointer" @click="save_current()">Save</div>
-    <div class="px-1 cursor-pointer" @click="save_as()">Save as</div>
+    <div class="pr-1 cursor-pointer hover:bg-atom-bg" @click="open_file()">
+      Open File
+    </div>
+    <div class="pr-1 cursor-pointer hover:bg-atom-bg" @click="open_folder()">
+      Open Folder
+    </div>
+    <div class="px-1 cursor-pointer hover:bg-atom-bg" @click="save_current()">
+      Save
+    </div>
+    <div class="px-1 cursor-pointer hover:bg-atom-bg" @click="save_as()">
+      Save as
+    </div>
     <div data-tauri-drag-region class="flex-1"></div>
-    <div class="px-1 cursor-pointer" @click="minimize()">Minimize</div>
-    <div class="px-1 cursor-pointer" @click="maximize()">Maximize</div>
-    <div class="px-1 cursor-pointer" @click="quit()">Quit</div>
+    <div class="px-1 cursor-pointer hover:bg-atom-bg px-2" @click="minimize()">
+      -
+    </div>
+    <div class="px-1 cursor-pointer hover:bg-atom-bg px-2" @click="maximize()">
+      o
+    </div>
+    <div
+      class="px-1 cursor-pointer hover:bg-atom-highlight-Red hover:text-black px-2"
+      @click="quit()"
+    >
+      x
+    </div>
   </div>
 </template>
