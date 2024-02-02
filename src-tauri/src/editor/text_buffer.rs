@@ -419,7 +419,8 @@ impl LineTextBuffer {
             let (first, _second) = current_line.split_at(selection.end.column);
             buf.insert_str(0, first);
 
-            for _i in (selection.start.row + 1..selection.end.row).rev() {
+            for i in (selection.start.row + 1..selection.end.row).rev() {
+                let current_line = self.lines[i].clone();
                 buf.insert(0, '\n');
                 buf.insert_str(0, &current_line);
             }
