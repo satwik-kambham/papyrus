@@ -4,6 +4,7 @@
 use state::InitCell;
 use std::sync::Arc;
 use std::sync::Mutex;
+use tauri::Manager;
 
 pub mod commands;
 pub mod editor;
@@ -20,6 +21,14 @@ async fn main() {
     EDITOR_STATE.set(Arc::new(Mutex::new(editor::state::EditorState::new())));
 
     tauri::Builder::default()
+        .setup(|app| {
+            #[cfg(debug_assertions)]
+            {
+                let window = app.get_window("main").unwrap();
+                window.open_devtools();
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::init_pty,
             commands::send_to_pty,
