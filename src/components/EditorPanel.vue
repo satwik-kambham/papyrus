@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, onUpdated } from "vue";
+import { ref, nextTick, onUpdated } from "vue";
 import { invoke } from "@tauri-apps/api";
 import { useWorkspaceStore } from "../stores/workspace";
 import { useEditorStore } from "../stores/editor";
 import { useSettingsStore } from "../stores/settings";
 import { readText, writeText } from "@tauri-apps/api/clipboard";
+import Editor from "../editor";
 
 const workspaceStore = useWorkspaceStore();
 const editorStore = useEditorStore();
 const settingsStore = useSettingsStore();
+
+const editor = new Editor(editorStore, settingsStore, workspaceStore);
 
 const gutterElement = ref<HTMLElement | null>(null);
 const editorElement = ref<HTMLElement | null>(null);
@@ -189,11 +192,6 @@ function wheel_event(e: WheelEvent) {
   };
 }
 
-function selection_made() {
-  const s = workspaceStore.currentSelection;
-  return s.start.row != s.end.row || s.start.column != s.end.column;
-}
-
 // Calculate offsets given row and column
 async function calculateOffsets(
   row: number,
@@ -246,7 +244,7 @@ async function setCursorPosition(selectionChanged: boolean) {
   currentLine.value = editorElement.value!.children[s.end.row];
   currentGutterLine.value = gutterElement.value!.children[s.end.row];
 
-  if (selectionChanged && selection_made()) {
+  if (selectionChanged && editor.selection_made()) {
     let highlights = [];
     let start = s.start;
     let end = s.end;
@@ -272,7 +270,7 @@ async function setCursorPosition(selectionChanged: boolean) {
     } else {
       let offsets = await calculateOffsets(
         start.row,
-        await get_row_length(start.row),
+        await editor.get_row_length(start.row),
       );
       highlights.push({
         vOffset: startOffsets[0],
@@ -281,7 +279,7 @@ async function setCursorPosition(selectionChanged: boolean) {
       });
       for (let i = start.row + 1; i < end.row; i++) {
         let startHOffset = (await calculateOffsets(i, 0))[1];
-        offsets = await calculateOffsets(i, await get_row_length(i));
+        offsets = await calculateOffsets(i, await editor.get_row_length(i));
         highlights.push({
           vOffset: offsets[0],
           startHOffset: startHOffset,
@@ -303,7 +301,7 @@ async function setCursorPosition(selectionChanged: boolean) {
     selectionHighlights.value = [];
   }
 
-  if (!selection_made()) {
+  if (!editor.selection_made()) {
     currentLine.value.classList.add("bg-atom-bg-light");
     currentGutterLine.value.classList.add("text-atom-text-dark");
     currentGutterLine.value.classList.add("text-atom-text-dark");
@@ -311,6 +309,14 @@ async function setCursorPosition(selectionChanged: boolean) {
 
   hiddenInput.value?.focus();
 }
+
+workspaceStore.$onAction((context) => {
+  context.after((result) => {
+    if (context.name === "updateSelection") {
+      setCursorPosition(result!);
+    }
+  });
+});
 
 function get_mouse_position(e: MouseEvent) {
   let range;
@@ -373,317 +379,6 @@ function get_mouse_position(e: MouseEvent) {
   };
 }
 
-// Insert character after cursor
-async function insert_character(character: string) {
-  if (selection_made()) {
-    await remove_character();
-  }
-  const s = workspaceStore.currentSelection;
-  let update = await invoke("insert_text", {
-    bufferIdx: editorStore.bufferIdx,
-    text: character,
-    cursor: {
-      row: s.end.row,
-      column: s.end.column,
-    },
-  });
-  editorStore.highlightedContent = update[0].text;
-  const changed = workspaceStore.updateSelection(
-    update[1].row,
-    update[1].column,
-    update[1].row,
-    update[1].column,
-  );
-  await setCursorPosition(changed);
-  workspaceStore.openEditors[workspaceStore.currentEditorIndex].unsavedChanges =
-    true;
-}
-
-// Remove character before cursor
-async function remove_character() {
-  const sel = workspaceStore.currentSelection;
-  if (sel.end.row != 0 || sel.end.column != 0) {
-    let s;
-    if (selection_made()) {
-      let start = {
-        row: sel.start.row,
-        column: sel.start.column,
-      };
-      let end = {
-        row: sel.end.row,
-        column: sel.end.column,
-      };
-
-      if (
-        start.row > end.row ||
-        (start.row == end.row && start.column > end.column)
-      ) {
-        let buf = start;
-        start = end;
-        end = buf;
-      }
-
-      s = {
-        start: start,
-        end: end,
-      };
-    } else {
-      if (sel.end.column != 0) {
-        s = {
-          start: {
-            row: sel.end.row,
-            column: sel.end.column - 1,
-          },
-          end: {
-            row: sel.end.row,
-            column: sel.end.column,
-          },
-        };
-      } else {
-        let prev_row_length = await get_row_length(sel.end.row - 1);
-        s = {
-          start: {
-            row: sel.end.row - 1,
-            column: prev_row_length,
-          },
-          end: {
-            row: sel.end.row,
-            column: 0,
-          },
-        };
-      }
-    }
-    let update = await invoke("remove_text", {
-      bufferIdx: editorStore.bufferIdx,
-      selection: s,
-    });
-    editorStore.highlightedContent = update[0].text;
-    let removed_text = update[1];
-    const changed = workspaceStore.updateSelection(
-      update[2].row,
-      update[2].column,
-      update[2].row,
-      update[2].column,
-    );
-    await setCursorPosition(changed);
-    workspaceStore.openEditors[
-      workspaceStore.currentEditorIndex
-    ].unsavedChanges = true;
-    return removed_text;
-  }
-}
-
-// Undo last action
-async function undo() {
-  let update = await invoke("undo", {
-    bufferIdx: editorStore.bufferIdx,
-  });
-  if (update != null) {
-    editorStore.highlightedContent = update[0].text;
-    const changed = workspaceStore.updateSelection(
-      update[1].row,
-      update[1].column,
-      update[1].row,
-      update[1].column,
-    );
-    await setCursorPosition(changed);
-  }
-  workspaceStore.openEditors[workspaceStore.currentEditorIndex].unsavedChanges =
-    true;
-}
-
-// Redo last action
-async function redo() {
-  let update = await invoke("redo", {
-    bufferIdx: editorStore.bufferIdx,
-  });
-  if (update != null) {
-    editorStore.highlightedContent = update[0].text;
-    const changed = workspaceStore.updateSelection(
-      update[1].row,
-      update[1].column,
-      update[1].row,
-      update[1].column,
-    );
-    await setCursorPosition(changed);
-  }
-  workspaceStore.openEditors[workspaceStore.currentEditorIndex].unsavedChanges =
-    true;
-}
-
-// Remove character before cursor
-async function get_selected_text() {
-  if (selection_made()) {
-    let sel = workspaceStore.currentSelection;
-    let start = sel.start;
-    let end = sel.end;
-
-    if (
-      start.row > end.row ||
-      (start.row == end.row && start.column > end.column)
-    ) {
-      let buf = start;
-      start = end;
-      end = buf;
-    }
-
-    let s = {
-      start: start,
-      end: end,
-    };
-
-    let selected_text = await invoke<string>("get_selected_text", {
-      bufferIdx: editorStore.bufferIdx,
-      selection: s,
-    });
-    return selected_text;
-  }
-  return "";
-}
-
-// Get lines length (total rows)
-async function get_lines_length() {
-  let lines_length = await invoke<number>("get_lines_length", {
-    bufferIdx: editorStore.bufferIdx,
-  });
-  return lines_length;
-}
-
-// Get row length
-async function get_row_length(row_number: number) {
-  let row_length = await invoke<number>("get_row_length", {
-    bufferIdx: editorStore.bufferIdx,
-    row: row_number,
-  });
-  return row_length;
-}
-
-// Move cursor up
-async function move_cursor_up() {
-  const s = workspaceStore.currentSelection;
-  if (s.end.row == 0) {
-    await move_cursor_line_start();
-  } else {
-    let column = Math.min(s.end.column, await get_row_length(s.end.row - 1));
-    const changed = workspaceStore.updateSelection(
-      s.end.row - 1,
-      column,
-      s.end.row - 1,
-      column,
-    );
-    await setCursorPosition(changed);
-  }
-}
-
-// Move cursor down
-async function move_cursor_down() {
-  const s = workspaceStore.currentSelection;
-  if (s.end.row == (await get_lines_length()) - 1) {
-    await move_cursor_line_end();
-  } else {
-    let column = Math.min(s.end.column, await get_row_length(s.end.row + 1));
-    const changed = workspaceStore.updateSelection(
-      s.end.row + 1,
-      column,
-      s.end.row + 1,
-      column,
-    );
-    await setCursorPosition(changed);
-  }
-}
-
-// Move cursor left
-async function move_cursor_left() {
-  const s = workspaceStore.currentSelection;
-  if (selection_made()) {
-    const changed = workspaceStore.updateSelection(
-      s.end.row,
-      s.end.column,
-      s.end.row,
-      s.end.column,
-    );
-    await setCursorPosition(changed);
-  } else {
-    if (s.end.column == 0) {
-      // Move to end of previous line
-      if (s.end.row != 0) {
-        const column = await get_row_length(s.end.row - 1);
-        const changed = workspaceStore.updateSelection(
-          s.end.row - 1,
-          column,
-          s.end.row - 1,
-          column,
-        );
-        await setCursorPosition(changed);
-      }
-    } else {
-      const changed = workspaceStore.updateSelection(
-        s.end.row,
-        s.end.column - 1,
-        s.end.row,
-        s.end.column - 1,
-      );
-      await setCursorPosition(changed);
-    }
-  }
-}
-
-// Move cursor right
-async function move_cursor_right() {
-  const s = workspaceStore.currentSelection;
-  if (selection_made()) {
-    const changed = workspaceStore.updateSelection(
-      s.end.row,
-      s.end.column,
-      s.end.row,
-      s.end.column,
-    );
-    await setCursorPosition(changed);
-  } else {
-    if (s.end.column == (await get_row_length(s.end.row))) {
-      // Move to start of next line
-      if (s.end.row != (await get_lines_length()) - 1) {
-        const column = 0;
-        const changed = workspaceStore.updateSelection(
-          s.end.row + 1,
-          column,
-          s.end.row + 1,
-          column,
-        );
-        await setCursorPosition(changed);
-      }
-    } else {
-      const changed = workspaceStore.updateSelection(
-        s.end.row,
-        s.end.column + 1,
-        s.end.row,
-        s.end.column + 1,
-      );
-      await setCursorPosition(changed);
-    }
-  }
-}
-
-// Move cursor to start of line
-async function move_cursor_line_start() {
-  const s = workspaceStore.currentSelection;
-  const changed = workspaceStore.updateSelection(s.end.row, 0, s.end.row, 0);
-  await setCursorPosition(changed);
-}
-
-// Move cursor to end of line
-async function move_cursor_line_end() {
-  const s = workspaceStore.currentSelection;
-  let column = await get_row_length(s.end.row);
-  const changed = workspaceStore.updateSelection(
-    s.end.row,
-    column,
-    s.end.row,
-    column,
-  );
-  await setCursorPosition(changed);
-}
-
 // Mouse click event handler
 async function mouse_down(e: MouseEvent) {
   e.preventDefault();
@@ -691,13 +386,12 @@ async function mouse_down(e: MouseEvent) {
 
   await asyncQueue.enqueue(async () => {
     let position = get_mouse_position(e);
-    const changed = workspaceStore.updateSelection(
+    workspaceStore.updateSelection(
       position.row,
       position.column,
       position.row,
       position.column,
     );
-    await setCursorPosition(changed);
   });
 }
 
@@ -709,14 +403,12 @@ async function mouse_move(e: MouseEvent) {
     await asyncQueue.enqueue(async () => {
       let position = get_mouse_position(e);
       const s = workspaceStore.currentSelection;
-      const changed = workspaceStore.updateSelection(
+      workspaceStore.updateSelection(
         s.start.row,
         s.start.column,
         position.row,
         position.column,
       );
-
-      await setCursorPosition(changed);
     });
   }
 }
@@ -729,13 +421,12 @@ async function mouse_up(e: MouseEvent) {
   await asyncQueue.enqueue(async () => {
     let position = get_mouse_position(e);
     const s = workspaceStore.currentSelection;
-    const changed = workspaceStore.updateSelection(
+    workspaceStore.updateSelection(
       s.start.row,
       s.start.column,
       position.row,
       position.column,
     );
-    await setCursorPosition(changed);
   });
 }
 
@@ -746,40 +437,40 @@ async function key_event(e: KeyboardEvent) {
   await asyncQueue.enqueue(async () => {
     if (e.ctrlKey) {
       if (e.key === "c") {
-        let selected_text = await get_selected_text();
+        let selected_text = await editor.get_selected_text();
         await writeText(selected_text);
       } else if (e.key === "v") {
         const t = await readText();
-        await insert_character(t ?? "");
+        await editor.insert_character(t ?? "");
       } else if (e.key === "x") {
-        let removed_text = await remove_character();
+        let removed_text = await editor.remove_character();
         await writeText(removed_text);
       } else if (e.key === "z") {
-        await undo();
+        await editor.undo();
       } else if (e.key === "y") {
-        await redo();
+        await editor.redo();
       }
     } else if (e.key.length == 1 || e.key === "Enter") {
       let key = e.key;
       if (key === "Enter") key = "\n";
-      await insert_character(key);
+      await editor.insert_character(key);
     } else if (e.key === "Tab") {
       const spacing = " ".repeat(settingsStore.tabSize);
-      await insert_character(spacing);
+      await editor.insert_character(spacing);
     } else if (e.key === "Backspace") {
-      await remove_character();
+      await editor.remove_character();
     } else if (e.key === "ArrowUp") {
-      await move_cursor_up();
+      await editor.move_cursor_up();
     } else if (e.key === "ArrowLeft") {
-      await move_cursor_left();
+      await editor.move_cursor_left();
     } else if (e.key === "ArrowDown") {
-      await move_cursor_down();
+      await editor.move_cursor_down();
     } else if (e.key === "ArrowRight") {
-      await move_cursor_right();
+      await editor.move_cursor_right();
     } else if (e.key === "Home") {
-      await move_cursor_line_start();
+      await editor.move_cursor_line_start();
     } else if (e.key === "End") {
-      await move_cursor_line_end();
+      await editor.move_cursor_line_end();
     }
   });
 }
@@ -829,7 +520,7 @@ async function key_event(e: KeyboardEvent) {
           </div>
           <div
             v-else
-            class="transition transition-tranform transition-opacity duration-500 mb-1.5 w-2 text-center"
+            class="transition duration-500 mb-1.5 w-2 text-center"
             :class="{
               'opacity-100 scale-100': hoverTabIndex == index,
               'opacity-0 scale-0': hoverTabIndex != index,
