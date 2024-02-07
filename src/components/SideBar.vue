@@ -2,16 +2,20 @@
 import TreeView from "./TreeView.vue";
 import { useWorkspaceStore } from "../stores/workspace";
 import { useEditorStore } from "../stores/editor";
+import { useSettingsStore } from "../stores/settings";
 import { invoke } from "@tauri-apps/api";
-import { openFile } from "../io.ts";
+import FileIO from "../io.ts";
 
 const workspaceStore = useWorkspaceStore();
 const editorStore = useEditorStore();
+const settingsStore = useSettingsStore();
+
+const fileIO = new FileIO(editorStore, settingsStore, workspaceStore);
 
 function clickItem(index: number, entries: Array<IFileEntry>) {
   const entry = entries[index];
   if (!entry.is_dir) {
-    openFile(entry.path, editorStore, workspaceStore);
+    fileIO.openFile(entry.path);
   } else {
     if (entry.entries == null) {
       invoke<Array<IFileEntry>>("get_folder_content", {
