@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import MenuBar from "./components/MenuBar.vue";
-import EditorPanel from "./components/EditorPanel.vue";
 import SideBar from "./components/SideBar.vue";
 import StatusBar from "./components/StatusBar.vue";
 import TerminalComponent from "./components/TerminalComponent.vue";
@@ -8,6 +7,7 @@ import TerminalComponent from "./components/TerminalComponent.vue";
 import { useWorkspaceStore } from "./stores/workspace";
 import { appWindow } from "@tauri-apps/api/window";
 import CollapsiblePanel from "./components/CollapsiblePanel.vue";
+import TabsComponent from "./components/TabsComponent.vue";
 
 const workspaceStore = useWorkspaceStore();
 
@@ -31,7 +31,7 @@ appWindow.onResized(async () => {
       <div class="flex flex-col shrink grow min-w-0">
         <div class="flex-1 w-full">
           <div class="overflow-hidden h-full w-full block">
-            <EditorPanel />
+            <TabsComponent />
           </div>
         </div>
         <CollapsiblePanel horizontal

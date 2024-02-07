@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, onUpdated } from "vue";
+import { ref, nextTick, onMounted, onUpdated } from "vue";
 import { invoke } from "@tauri-apps/api";
 import { useWorkspaceStore } from "../stores/workspace";
 import { useEditorStore } from "../stores/editor";
@@ -36,7 +36,6 @@ const selectionHighlights = ref<
 let selecting = false;
 
 const gutterWidth = ref(0);
-const hoverTabIndex = ref(-1);
 
 onUpdated(() => {
   gutterWidth.value = gutterElement.value?.getBoundingClientRect().width ?? 0;
@@ -46,38 +45,15 @@ onUpdated(() => {
 const cursorWidth = ref(0);
 const cursorHeight = ref(0);
 
-settingsStore.$subscribe(async (mutation, store) => {
+settingsStore.$subscribe(async () => {
   await nextTick();
-  cursorWidth.value = dummyElement.value?.getBoundingClientRect().width;
-  cursorHeight.value = dummyElement.value?.getBoundingClientRect().height;
+  cursorWidth.value = dummyElement.value?.getBoundingClientRect().width ?? 0;
+  cursorHeight.value = dummyElement.value?.getBoundingClientRect().height ?? 0;
   await setCursorPosition(true);
 });
 
-function resetState() {
-  if (currentLine.value != null)
-    currentLine.value!.classList.remove("bg-atom-bg-light");
-  if (currentGutterLine.value != null) {
-    currentGutterLine.value!.classList.remove("bg-atom-bg-light");
-    currentGutterLine.value!.classList.remove("text-atom-text-dark");
-  }
-
-  currentLine.value = null;
-  currentGutterLine.value = null;
-  hOffset.value = 0;
-  vOffset.value = 0;
-  cursorHOffset.value = 0;
-  cursorVOffset.value = 0;
-  selectionHighlights.value = [];
-
-  selecting = false;
-
-  gutterWidth.value = 0;
-  hoverTabIndex.value = -1;
-}
-
 async function switchBuffer(index: number) {
   await asyncQueue.enqueue(async () => {
-    resetState();
     invoke<number>("create_buffer_from_file_path", {
       path: workspaceStore.openEditors[index].entry?.path,
     })
@@ -106,22 +82,11 @@ async function switchBuffer(index: number) {
   });
 }
 
-async function closeBuffer(index: number) {
-  await invoke("delete_buffer", {
-    bufferIdx: editorStore.bufferIdx,
-  });
-  workspaceStore.openEditors.splice(index, 1);
-  if (workspaceStore.openEditors.length == 0) {
-    workspaceStore.currentEditorIndex = -1;
-    editorStore.bufferIdx = -1;
-    editorStore.fileEntry = null;
-    editorStore.encoding = "Unknown";
-    editorStore.language = "Unknown";
-    editorStore.highlightedContent = [];
-  } else {
-    workspaceStore.switchEditor(0);
+onMounted(async () => {
+  if (workspaceStore.currentEditorIndex != -1) {
+    await switchBuffer(workspaceStore.currentEditorIndex);
   }
-}
+});
 
 workspaceStore.$onAction((context) => {
   context.after(async () => {
@@ -476,61 +441,7 @@ async function key_event(e: KeyboardEvent) {
 }
 </script>
 <template>
-  <div
-    class="flex flex-col h-full"
-    v-if="workspaceStore.currentEditorIndex != -1"
-  >
-    <div
-      class="flex overflow-x-auto custom-scrollbar z-30 bg-atom-bg-dark border-b-[1px] border-atom-black"
-    >
-      <div
-        class="px-2 py-1 border-r-[1px] min-w-64 justify-center flex-shrink-0 border-r-atom-black whitespace-nowrap cursor-pointer select-none flex"
-        v-for="(editor, index) in workspaceStore.openEditors"
-        :key="index"
-        @mouseover="hoverTabIndex = index"
-        @mouseleave="hoverTabIndex = -1"
-        @click="() => workspaceStore.switchEditor(index)"
-        :class="{
-          'bg-atom-bg text-atom-text border-l-2 border-atom-primary':
-            index == workspaceStore.currentEditorIndex,
-          'text-atom-text-light': index != workspaceStore.currentEditorIndex,
-        }"
-      >
-        <div class="grow"></div>
-        {{ editor.entry?.name }}
-        <div class="grow"></div>
-
-        <div
-          class="px-1 text-atom-text hover:text-black hover:bg-atom-primary mx-1 rounded-sm"
-          @click="
-            async (e) => {
-              e.stopPropagation();
-              await closeBuffer(index);
-            }
-          "
-        >
-          <div
-            class="text-atom-primary w-2 mb-1.5"
-            v-if="
-              workspaceStore.openEditors[index].unsavedChanges &&
-              hoverTabIndex != index
-            "
-          >
-            U
-          </div>
-          <div
-            v-else
-            class="transition duration-500 mb-1.5 w-2 text-center"
-            :class="{
-              'opacity-100 scale-100': hoverTabIndex == index,
-              'opacity-0 scale-0': hoverTabIndex != index,
-            }"
-          >
-            x
-          </div>
-        </div>
-      </div>
-    </div>
+  <div class="h-full" v-if="workspaceStore.currentEditorIndex != -1">
     <div class="flex h-full">
       <div
         class="h-full relative bg-atom-bg z-20 w-0"

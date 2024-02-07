@@ -10,6 +10,23 @@ export default class Editor {
     public workspaceStore: ReturnType<typeof useWorkspaceStore>,
   ) {}
 
+  async closeBuffer(index: number) {
+    await invoke("delete_buffer", {
+      bufferIdx: this.editorStore.bufferIdx,
+    });
+    this.workspaceStore.openEditors.splice(index, 1);
+    if (this.workspaceStore.openEditors.length == 0) {
+      this.workspaceStore.currentEditorIndex = -1;
+      this.editorStore.bufferIdx = -1;
+      this.editorStore.fileEntry = null;
+      this.editorStore.encoding = "Unknown";
+      this.editorStore.language = "Unknown";
+      this.editorStore.highlightedContent = [];
+    } else {
+      this.workspaceStore.switchEditor(0);
+    }
+  }
+
   selection_made() {
     const s = this.workspaceStore.currentSelection;
     return s.start.row != s.end.row || s.start.column != s.end.column;
