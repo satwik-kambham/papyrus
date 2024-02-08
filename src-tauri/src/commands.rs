@@ -219,6 +219,36 @@ pub fn redo(buffer_idx: usize) -> Option<(highlight::HighlightedText, Cursor)> {
 }
 
 #[tauri::command]
+pub fn add_indentation(
+    buffer_idx: usize,
+    selection: Selection,
+    tab_size: usize,
+) -> (highlight::HighlightedText, Selection) {
+    let mut editor_state = EDITOR_STATE.get().lock().unwrap();
+    let updated_selection =
+        editor_state.text_buffers[buffer_idx].add_indentation(selection, tab_size);
+    (
+        editor_state.text_buffers[buffer_idx].highlight_complete_text(),
+        updated_selection,
+    )
+}
+
+#[tauri::command]
+pub fn remove_indentation(
+    buffer_idx: usize,
+    selection: Selection,
+    tab_size: usize,
+) -> (highlight::HighlightedText, Selection) {
+    let mut editor_state = EDITOR_STATE.get().lock().unwrap();
+    let updated_selection =
+        editor_state.text_buffers[buffer_idx].remove_indentation(selection, tab_size);
+    (
+        editor_state.text_buffers[buffer_idx].highlight_complete_text(),
+        updated_selection,
+    )
+}
+
+#[tauri::command]
 pub fn get_selected_text(buffer_idx: usize, selection: Selection) -> String {
     let editor_state = EDITOR_STATE.get().lock().unwrap();
     let selected_text = editor_state.text_buffers[buffer_idx].get_selected_text(selection);

@@ -127,8 +127,8 @@ export default class Editor {
   async remove_character(backwards = false) {
     const sel = this.workspaceStore.currentSelection;
     if (
-      (backwards && (sel.end.row != 0 || sel.end.column != 0)) ||
-      (!backwards &&
+      (!backwards && (sel.end.row != 0 || sel.end.column != 0)) ||
+      (backwards &&
         (sel.end.row != (await this.get_lines_length()) - 1 ||
           sel.end.column != (await this.get_row_length(sel.end.row))))
     ) {
@@ -377,6 +377,46 @@ export default class Editor {
         update[1].column,
       );
     }
+    this.workspaceStore.openEditors[
+      this.workspaceStore.currentEditorIndex
+    ].unsavedChanges = true;
+  }
+
+  // Add indentation
+  async add_indentation() {
+    const s = this.workspaceStore.currentSelection;
+    const update = await invoke("add_indentation", {
+      bufferIdx: this.editorStore.bufferIdx,
+      selection: s,
+      tabSize: this.settingsStore.tabSize,
+    });
+    this.editorStore.highlightedContent = update[0].text;
+    this.workspaceStore.updateSelection(
+      update[1].start.row,
+      update[1].start.column,
+      update[1].end.row,
+      update[1].end.column,
+    );
+    this.workspaceStore.openEditors[
+      this.workspaceStore.currentEditorIndex
+    ].unsavedChanges = true;
+  }
+
+  // Remove indentation
+  async remove_indentation() {
+    const s = this.workspaceStore.currentSelection;
+    const update = await invoke("remove_indentation", {
+      bufferIdx: this.editorStore.bufferIdx,
+      selection: s,
+      tabSize: this.settingsStore.tabSize,
+    });
+    this.editorStore.highlightedContent = update[0].text;
+    this.workspaceStore.updateSelection(
+      update[1].start.row,
+      update[1].start.column,
+      update[1].end.row,
+      update[1].end.column,
+    );
     this.workspaceStore.openEditors[
       this.workspaceStore.currentEditorIndex
     ].unsavedChanges = true;

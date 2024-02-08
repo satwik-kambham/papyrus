@@ -270,7 +270,7 @@ async function setCursorPosition(selectionChanged: boolean) {
 
   if (!editor.selection_made()) {
     currentLine.value.classList.add("bg-atom-bg-light");
-    currentGutterLine.value.classList.add("text-atom-text-dark");
+    currentGutterLine.value.classList.add("bg-atom-bg-light");
     currentGutterLine.value.classList.add("text-atom-text-dark");
   }
 
@@ -434,6 +434,10 @@ async function key_event(e: KeyboardEvent) {
         await editor.redo();
       } else if (e.key === "s") {
         await fileIO.saveCurrent();
+      } else if (e.key === "[") {
+        await editor.remove_indentation();
+      } else if (e.key === "]") {
+        await editor.add_indentation();
       }
     } else if (e.key.length == 1 || e.key === "Enter") {
       let key = e.key;

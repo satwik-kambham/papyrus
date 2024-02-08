@@ -441,6 +441,42 @@ impl LineTextBuffer {
         None
     }
 
+    /// Add indentation to the selected lines and returns the updated cursor position
+    pub fn add_indentation(&mut self, selection: Selection, tab_size: usize) -> Selection {
+        let mut updated_selection = selection.clone();
+        let tab = " ".repeat(tab_size);
+        updated_selection.start.column += tab_size;
+        updated_selection.end.column += tab_size;
+        for i in selection.start.row..=selection.end.row {
+            let current_line = self.lines[i].clone();
+            let mut new_line = String::new();
+            new_line.push_str(&tab);
+            new_line.push_str(&current_line);
+            self.lines[i] = new_line;
+        }
+        updated_selection
+    }
+
+    /// Remove indentation from the selected lines if present and returns the updated cursor position
+    pub fn remove_indentation(&mut self, selection: Selection, tab_size: usize) -> Selection {
+        let mut updated_selection = selection.clone();
+        let tab = " ".repeat(tab_size);
+        for i in selection.start.row..=selection.end.row {
+            let current_line = self.lines[i].clone();
+            if current_line.starts_with(&tab) {
+                let (_first, second) = current_line.split_at(tab_size);
+                self.lines[i] = second.to_owned();
+
+                if i == selection.start.row {
+                    updated_selection.start.column -= tab_size;
+                } else if i == selection.end.row {
+                    updated_selection.end.column -= tab_size;
+                }
+            }
+        }
+        updated_selection
+    }
+
     /// Get text at selection
     pub fn get_selected_text(&self, selection: Selection) -> String {
         if selection.start.row == selection.end.row {
