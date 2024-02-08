@@ -153,6 +153,13 @@ pub fn get_lines_length(buffer_idx: usize) -> usize {
 }
 
 #[tauri::command]
+pub fn select_token_under_cursor(buffer_idx: usize, cursor: Cursor) -> Option<Selection> {
+    let editor_state = EDITOR_STATE.get().lock().unwrap();
+    let selection = editor_state.text_buffers[buffer_idx].select_token_under_cursor(cursor);
+    selection
+}
+
+#[tauri::command]
 pub fn insert_text(
     buffer_idx: usize,
     text: String,

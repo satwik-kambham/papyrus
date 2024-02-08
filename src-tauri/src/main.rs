@@ -41,6 +41,7 @@ async fn main() {
             commands::remove_text,
             commands::get_row_length,
             commands::get_lines_length,
+            commands::select_token_under_cursor,
             commands::save_buffer,
             commands::save_buffer_to_new_file,
             commands::get_selected_text,

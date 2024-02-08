@@ -268,6 +268,42 @@ impl LineTextBuffer {
         self.lines.len()
     }
 
+    pub fn select_token_under_cursor(&self, cursor: Cursor) -> Option<Selection> {
+        let tokens = self.tokens.as_ref().unwrap();
+        let mut start = None;
+        let mut end = None;
+        let mut is_identifier = false;
+        for (range, kind) in tokens.iter() {
+            if cursor.row >= range.start_point.row
+                && cursor.row <= range.end_point.row
+                && cursor.column >= range.start_point.column
+                && cursor.column <= range.end_point.column
+            {
+                start = Some(Cursor {
+                    row: range.start_point.row as usize,
+                    column: range.start_point.column as usize,
+                });
+                end = Some(Cursor {
+                    row: range.end_point.row as usize,
+                    column: range.end_point.column as usize,
+                });
+                if kind.ends_with(".identifier") {
+                    is_identifier = true;
+                }
+                break;
+            }
+        }
+        if start.is_some() && end.is_some() {
+            if is_identifier {
+                return Some(Selection {
+                    start: start.unwrap(),
+                    end: end.unwrap(),
+                });
+            }
+        }
+        None
+    }
+
     /// Insert text at cursor position and returns the updated cursor position
     pub fn insert_text_no_log(&mut self, text: &String, cursor: &Cursor) -> Cursor {
         let mut updated_cursor = cursor.clone();

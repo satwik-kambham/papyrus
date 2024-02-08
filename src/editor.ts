@@ -79,6 +79,24 @@ export default class Editor {
     return "";
   }
 
+  // Get selected text
+  async get_token_under_cursor() {
+    const s = this.workspaceStore.currentSelection;
+    const selection = await invoke<ISelection>("select_token_under_cursor", {
+      bufferIdx: this.editorStore.bufferIdx,
+      cursor: {
+        row: s.end.row,
+        column: s.end.column,
+      },
+    });
+    this.workspaceStore.updateSelection(
+      selection.start.row,
+      selection.start.column,
+      selection.end.row,
+      selection.end.column,
+    );
+  }
+
   // Insert character after cursor
   async insert_character(character: string) {
     if (this.selection_made()) {

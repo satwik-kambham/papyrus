@@ -362,6 +362,22 @@ async function mouse_down(e: MouseEvent) {
   });
 }
 
+// Double click event handler
+async function dblclick(e: MouseEvent) {
+  e.preventDefault();
+
+  await asyncQueue.enqueue(async () => {
+    let position = get_mouse_position(e);
+    workspaceStore.updateSelection(
+      position.row,
+      position.column,
+      position.row,
+      position.column,
+    );
+    await editor.get_token_under_cursor();
+  });
+}
+
 // Mouse click event handler
 async function mouse_move(e: MouseEvent) {
   e.preventDefault();
@@ -478,6 +494,7 @@ async function key_event(e: KeyboardEvent) {
           class="bg-transparent min-h-full font-code antialiased leading-normal absolute min-w-full overflow-visible h-fit w-fit cursor-text z-10 select-none"
           @wheel="wheel_event"
           @mousedown="mouse_down"
+          @dblclick="dblclick"
           @mousemove="mouse_move"
           @mouseup="mouse_up"
           :style="{

@@ -14,6 +14,17 @@ declare interface ITerminalPayload {
   output: string;
 }
 
+declare interface ISelection {
+  start: {
+    row: number;
+    column: number;
+  };
+  end: {
+    row: number;
+    column: number;
+  };
+}
+
 declare interface OpenEditor {
   entry?: IFileEntry;
   unsavedChanges: boolean;
