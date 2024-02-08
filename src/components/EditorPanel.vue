@@ -441,8 +441,15 @@ async function key_event(e: KeyboardEvent) {
       }
     } else if (e.key.length == 1 || e.key === "Enter") {
       let key = e.key;
-      if (key === "Enter") key = "\n";
+      let indentSize = 0;
+      if (key === "Enter") {
+        key = "\n";
+        indentSize = await editor.get_indent_size();
+      }
       await editor.insert_character(key);
+      if (e.key === "Enter") {
+        await editor.add_indentation(indentSize);
+      }
     } else if (e.key === "Tab") {
       const spacing = " ".repeat(settingsStore.tabSize);
       await editor.insert_character(spacing);

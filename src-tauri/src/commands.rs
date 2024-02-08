@@ -249,6 +249,13 @@ pub fn remove_indentation(
 }
 
 #[tauri::command]
+pub fn get_indent_size(buffer_idx: usize, row: usize) -> usize {
+    let editor_state = EDITOR_STATE.get().lock().unwrap();
+    let indent_size = editor_state.text_buffers[buffer_idx].get_indent_size(row);
+    indent_size
+}
+
+#[tauri::command]
 pub fn get_selected_text(buffer_idx: usize, selection: Selection) -> String {
     let editor_state = EDITOR_STATE.get().lock().unwrap();
     let selected_text = editor_state.text_buffers[buffer_idx].get_selected_text(selection);

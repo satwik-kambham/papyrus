@@ -49,6 +49,7 @@ async fn main() {
             commands::redo,
             commands::add_indentation,
             commands::remove_indentation,
+            commands::get_indent_size,
             commands::get_file_info,
         ])
         .run(tauri::generate_context!())

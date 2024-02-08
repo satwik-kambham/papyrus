@@ -477,6 +477,13 @@ impl LineTextBuffer {
         updated_selection
     }
 
+    /// Get indent size of the given row
+    pub fn get_indent_size(&self, row: usize) -> usize {
+        let current_line = self.lines[row].clone();
+        let indent_size = current_line.chars().take_while(|c| *c == ' ').count();
+        indent_size
+    }
+
     /// Get text at selection
     pub fn get_selected_text(&self, selection: Selection) -> String {
         if selection.start.row == selection.end.row {

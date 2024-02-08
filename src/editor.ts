@@ -383,12 +383,12 @@ export default class Editor {
   }
 
   // Add indentation
-  async add_indentation() {
+  async add_indentation(tabSize?: number) {
     const s = this.workspaceStore.currentSelection;
     const update = await invoke("add_indentation", {
       bufferIdx: this.editorStore.bufferIdx,
       selection: s,
-      tabSize: this.settingsStore.tabSize,
+      tabSize: tabSize ?? this.settingsStore.tabSize,
     });
     this.editorStore.highlightedContent = update[0].text;
     this.workspaceStore.updateSelection(
@@ -420,5 +420,14 @@ export default class Editor {
     this.workspaceStore.openEditors[
       this.workspaceStore.currentEditorIndex
     ].unsavedChanges = true;
+  }
+
+  // Get indent size
+  async get_indent_size() {
+    const indent_size = await invoke<number>("get_indent_size", {
+      bufferIdx: this.editorStore.bufferIdx,
+      row: this.workspaceStore.currentSelection.start.row,
+    });
+    return indent_size;
   }
 }
