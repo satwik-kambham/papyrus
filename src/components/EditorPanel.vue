@@ -6,12 +6,14 @@ import { useEditorStore } from "../stores/editor";
 import { useSettingsStore } from "../stores/settings";
 import { readText, writeText } from "@tauri-apps/api/clipboard";
 import Editor from "../editor";
+import FileIO from "../io";
 
 const workspaceStore = useWorkspaceStore();
 const editorStore = useEditorStore();
 const settingsStore = useSettingsStore();
 
 const editor = new Editor(editorStore, settingsStore, workspaceStore);
+const fileIO = new FileIO(editorStore, settingsStore, workspaceStore);
 
 const gutterElement = ref<HTMLElement | null>(null);
 const editorElement = ref<HTMLElement | null>(null);
@@ -414,6 +416,8 @@ async function key_event(e: KeyboardEvent) {
         await editor.undo();
       } else if (e.key === "y") {
         await editor.redo();
+      } else if (e.key === "s") {
+        await fileIO.saveCurrent();
       }
     } else if (e.key.length == 1 || e.key === "Enter") {
       let key = e.key;
@@ -424,6 +428,8 @@ async function key_event(e: KeyboardEvent) {
       await editor.insert_character(spacing);
     } else if (e.key === "Backspace") {
       await editor.remove_character();
+    } else if (e.key === "Delete") {
+      await editor.remove_character(true);
     } else if (e.key === "ArrowUp") {
       await editor.move_cursor_up();
     } else if (e.key === "ArrowLeft") {

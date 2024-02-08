@@ -106,9 +106,14 @@ export default class Editor {
   }
 
   // Remove character before cursor
-  async remove_character() {
+  async remove_character(backwards = false) {
     const sel = this.workspaceStore.currentSelection;
-    if (sel.end.row != 0 || sel.end.column != 0) {
+    if (
+      (backwards && (sel.end.row != 0 || sel.end.column != 0)) ||
+      (!backwards &&
+        (sel.end.row != (await this.get_lines_length()) - 1 ||
+          sel.end.column != (await this.get_row_length(sel.end.row))))
+    ) {
       let s;
       if (this.selection_made()) {
         let start = {
@@ -134,29 +139,55 @@ export default class Editor {
           end: end,
         };
       } else {
-        if (sel.end.column != 0) {
-          s = {
-            start: {
-              row: sel.end.row,
-              column: sel.end.column - 1,
-            },
-            end: {
-              row: sel.end.row,
-              column: sel.end.column,
-            },
-          };
+        if (backwards) {
+          if (sel.end.column != (await this.get_row_length(sel.end.row))) {
+            s = {
+              start: {
+                row: sel.end.row,
+                column: sel.end.column,
+              },
+              end: {
+                row: sel.end.row,
+                column: sel.end.column + 1,
+              },
+            };
+          } else {
+            s = {
+              start: {
+                row: sel.end.row,
+                column: sel.end.column,
+              },
+              end: {
+                row: sel.end.row + 1,
+                column: 0,
+              },
+            };
+          }
         } else {
-          const prev_row_length = await this.get_row_length(sel.end.row - 1);
-          s = {
-            start: {
-              row: sel.end.row - 1,
-              column: prev_row_length,
-            },
-            end: {
-              row: sel.end.row,
-              column: 0,
-            },
-          };
+          if (sel.end.column != 0) {
+            s = {
+              start: {
+                row: sel.end.row,
+                column: sel.end.column - 1,
+              },
+              end: {
+                row: sel.end.row,
+                column: sel.end.column,
+              },
+            };
+          } else {
+            const prev_row_length = await this.get_row_length(sel.end.row - 1);
+            s = {
+              start: {
+                row: sel.end.row - 1,
+                column: prev_row_length,
+              },
+              end: {
+                row: sel.end.row,
+                column: 0,
+              },
+            };
+          }
         }
       }
       const update = await invoke("remove_text", {
