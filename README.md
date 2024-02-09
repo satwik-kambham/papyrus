@@ -3,6 +3,8 @@
 An elegant code editor inspired by atom with syntax highlighting,
 integrated terminal and more.
 
+![Screenshot](./public/Papyrus.png)
+
 ## Build instructions
 
 ### Prerequisites

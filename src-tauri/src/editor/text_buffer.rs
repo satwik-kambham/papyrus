@@ -469,7 +469,8 @@ impl LineTextBuffer {
 
                 if i == selection.start.row {
                     updated_selection.start.column -= tab_size;
-                } else if i == selection.end.row {
+                }
+                if i == selection.end.row {
                     updated_selection.end.column -= tab_size;
                 }
             }
