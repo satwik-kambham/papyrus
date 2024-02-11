@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import { PropType } from "vue";
+import {
+  FolderIcon,
+  FolderOpenIcon,
+  DocumentTextIcon,
+} from "@heroicons/vue/24/solid";
 
 const props = defineProps({
   entries: {
@@ -29,17 +34,17 @@ function clickItem(index: number, entries: Array<IFileEntry>) {
       class="flex hover:bg-atom-bg-light cursor-pointer pl-2 py-0.5"
       @click="clickItem(index, props.entries)"
     >
-      <img
-        class="pl-1 pr-2"
-        :src="
-          !entry.is_dir
-            ? '/file.svg'
-            : entry.entries == null
-              ? '/folder.svg'
-              : '/folder-open.svg'
-        "
-        alt="File Icon"
-      />
+      <div class="pl-1 pr-2">
+        <FolderIcon
+          v-if="entry.is_dir && entry.entries == null"
+          class="h-full w-4"
+        />
+        <FolderOpenIcon
+          v-else-if="entry.is_dir && entry.entries != null"
+          class="text-atom-highlight h-full w-4"
+        />
+        <DocumentTextIcon v-else class="text-atom-highlight h-full w-4" />
+      </div>
       <div class="truncate">{{ entry.name }}</div>
     </div>
     <div v-if="entry.entries != null" class="pl-4">

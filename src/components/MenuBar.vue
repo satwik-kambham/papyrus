@@ -2,6 +2,15 @@
 import { useWorkspaceStore } from "../stores/workspace";
 import { useEditorStore } from "../stores/editor";
 import { useSettingsStore } from "../stores/settings";
+import MenuItem from "./MenuItem.vue";
+import SubMenu from "./SubMenu.vue";
+import SubMenuItem from "./SubMenuItem.vue";
+import {
+  MinusIcon,
+  StopIcon,
+  Square2StackIcon,
+  XMarkIcon,
+} from "@heroicons/vue/24/outline";
 import FileIO from "../io.ts";
 import Window from "../window";
 
@@ -15,45 +24,45 @@ const window = new Window(workspaceStore);
 
 <template>
   <div data-tauri-drag-region class="bg-atom-bg-dark p-1 flex select-none">
-    <div
-      class="pr-1 cursor-pointer hover:bg-atom-bg"
-      @click="fileIO.openFileDialog()"
-    >
-      Open File
-    </div>
-    <div
-      class="pr-1 cursor-pointer hover:bg-atom-bg"
-      @click="fileIO.openFolder()"
-    >
-      Open Folder
-    </div>
-    <div
-      class="px-1 cursor-pointer hover:bg-atom-bg"
-      @click="fileIO.saveCurrent()"
-    >
-      Save
-    </div>
-    <div class="px-1 cursor-pointer hover:bg-atom-bg" @click="fileIO.saveAs()">
-      Save as
-    </div>
+    <MenuItem name="File">
+      <SubMenu>
+        <SubMenuItem @click="fileIO.openFileDialog()">Open File</SubMenuItem>
+        <SubMenuItem @click="fileIO.openFolder()">Open Folder</SubMenuItem>
+        <SubMenuItem />
+        <SubMenuItem @click="fileIO.saveCurrent()">Save</SubMenuItem>
+        <SubMenuItem @click="fileIO.saveAs()">Save as</SubMenuItem>
+        <SubMenuItem />
+        <SubMenuItem @click="window.close()">Quit</SubMenuItem>
+      </SubMenu>
+    </MenuItem>
+    <MenuItem name="Edit">
+      <SubMenu>
+        <SubMenuItem @click="">Undo</SubMenuItem>
+        <SubMenuItem @click="">Redo</SubMenuItem>
+        <SubMenuItem />
+        <SubMenuItem @click="">Add Indent</SubMenuItem>
+        <SubMenuItem @click="">Remove Indent</SubMenuItem>
+      </SubMenu>
+    </MenuItem>
     <div data-tauri-drag-region class="flex-1"></div>
     <div
       class="px-2 cursor-pointer hover:bg-atom-bg"
       @click="window.minimize()"
     >
-      -
+      <MinusIcon class="h-full w-4" />
     </div>
     <div
       class="px-2 cursor-pointer hover:bg-atom-bg"
       @click="window.maximize()"
     >
-      o
+      <StopIcon v-if="!workspaceStore.maximized" class="h-full w-4" />
+      <Square2StackIcon v-else class="h-full w-4" />
     </div>
     <div
       class="px-2 cursor-pointer hover:bg-atom-highlight-Red hover:text-black"
       @click="window.close()"
     >
-      x
+      <XMarkIcon class="h-full w-4" />
     </div>
   </div>
 </template>
