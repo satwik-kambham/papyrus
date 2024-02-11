@@ -43,6 +43,7 @@ const hoverTabIndex = ref(-1);
             async (e) => {
               e.stopPropagation();
               await editor.closeBuffer(index);
+              hoverTabIndex = -1;
             }
           "
         >
