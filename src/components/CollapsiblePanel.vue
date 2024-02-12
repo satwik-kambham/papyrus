@@ -4,6 +4,7 @@ import { useWorkspaceStore } from "../stores/workspace";
 
 const props = defineProps({
   horizontal: Boolean,
+  inverse: Boolean,
 });
 
 const workspaceStore = useWorkspaceStore();
@@ -69,7 +70,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    class="flex relative overflow-"
+    class="flex relative"
     :class="{
       'flex-row': !props.horizontal,
       'flex-col-reverse': props.horizontal,
@@ -91,8 +92,14 @@ onBeforeUnmount(() => {
     <div
       class="hover:bg-atom-primary transition-colors delay-200 duration-500 absolute z-50"
       :class="{
-        'h-full w-1 top-0 -right-1 cursor-col-resize': !props.horizontal,
-        'w-full h-1 -top-1 right-0 cursor-row-resize': props.horizontal,
+        'h-full w-1 top-0 -right-1 cursor-col-resize':
+          !props.horizontal && !props.inverse,
+        'w-full h-1 -top-1 right-0 cursor-row-resize':
+          props.horizontal && !props.inverse,
+        'h-full w-1 bottom-0 -left-1 cursor-col-resize':
+          !props.horizontal && props.inverse,
+        'w-full h-1 -bottom-1 left-0 cursor-row-resize':
+          props.horizontal && props.inverse,
       }"
       @mousedown="handleMouseDown"
       @mousemove="handleMouseMove"
@@ -102,13 +109,21 @@ onBeforeUnmount(() => {
       class="bg-atom-highlight cursor-pointer select-none transition-all duration-200 transform p-2 absolute w-8 h-8 text-center text-xl z-30 opacity-0 hover:opacity-100"
       :class="{
         'rotate-180 -top-4 right-1/2 hover:-translate-y-4 rounded-b-full':
-          props.horizontal && panelSize !== 0,
+          props.horizontal && !props.inverse && panelSize !== 0,
         '-rotate-90 top-1/2 -right-4 hover:translate-x-4 rounded-b-full':
-          !props.horizontal && panelSize !== 0,
+          !props.horizontal && !props.inverse && panelSize !== 0,
         'rotate-90 top-1/2 -right-4 hover:translate-x-4 rounded-t-full':
-          !props.horizontal && panelSize === 0,
+          !props.horizontal && !props.inverse && panelSize === 0,
         'rotate-0 -top-4 right-1/2 hover:-translate-y-4 rounded-t-full':
-          props.horizontal && panelSize === 0,
+          props.horizontal && !props.inverse && panelSize === 0,
+        'rotate-180 -bottom-4 left-1/2 hover:translate-y-4 rounded-b-full':
+          props.horizontal && props.inverse && panelSize !== 0,
+        'rotate-90 bottom-1/2 -left-4 hover:-translate-x-4 rounded-b-full':
+          !props.horizontal && props.inverse && panelSize !== 0,
+        '-rotate-90 bottom-1/2 -left-4 hover:-translate-x-4 rounded-t-full':
+          !props.horizontal && props.inverse && panelSize === 0,
+        'rotate-0 -bottom-4 left-1/2 hover:translate-y-4 rounded-t-full':
+          props.horizontal && props.inverse && panelSize === 0,
       }"
       @mousedown="toggleMinimizer"
     >

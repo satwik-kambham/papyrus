@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { useWorkspaceStore } from "../stores/workspace";
+import { useEditorStore } from "../stores/editor";
+import { useSettingsStore } from "../stores/settings";
+import { invoke } from "@tauri-apps/api";
+import FileIO from "../io.ts";
 import { PropType } from "vue";
 import {
   FolderIcon,
@@ -6,33 +11,43 @@ import {
   DocumentTextIcon,
 } from "@heroicons/vue/24/solid";
 
-const props = defineProps({
-  entries: {
-    type: Array<IFileEntry>,
-    required: true,
-  },
-  clickHandler: {
-    type: Function as PropType<
-      (index: number, entries: Array<IFileEntry>) => void
-    >,
-    required: true,
-  },
-});
+const workspaceStore = useWorkspaceStore();
+const editorStore = useEditorStore();
+const settingsStore = useSettingsStore();
+
+const fileIO = new FileIO(editorStore, settingsStore, workspaceStore);
 
 function clickItem(index: number, entries: Array<IFileEntry>) {
-  props.clickHandler(index, entries);
+  const entry = entries[index];
+  if (!entry.is_dir) {
+    fileIO.openFile(entry.path);
+  } else {
+    if (entry.entries == null) {
+      invoke<Array<IFileEntry>>("get_folder_content", {
+        path: entry.path,
+      })
+        .then((entries) => {
+          entry.entries = entries;
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    } else {
+      entry.entries = null;
+    }
+  }
 }
 </script>
 
 <template>
   <div
     class="flex flex-col"
-    v-for="(entry, index) in props.entries"
+    v-for="(entry, index) in workspaceStore.folderEntries"
     :key="index"
   >
     <div
       class="flex hover:bg-atom-bg-light cursor-pointer pl-2 py-0.5"
-      @click="clickItem(index, props.entries)"
+      @click="clickItem(index, workspaceStore.folderEntries)"
     >
       <div class="pl-1 pr-2">
         <FolderIcon
