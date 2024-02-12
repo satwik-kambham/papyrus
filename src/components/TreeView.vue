@@ -11,6 +11,13 @@ import {
   DocumentTextIcon,
 } from "@heroicons/vue/24/solid";
 
+const props = defineProps({
+  entries: {
+    type: Array<IFileEntry>,
+    required: true,
+  },
+});
+
 const workspaceStore = useWorkspaceStore();
 const editorStore = useEditorStore();
 const settingsStore = useSettingsStore();
@@ -42,12 +49,12 @@ function clickItem(index: number, entries: Array<IFileEntry>) {
 <template>
   <div
     class="flex flex-col"
-    v-for="(entry, index) in workspaceStore.folderEntries"
+    v-for="(entry, index) in props.entries"
     :key="index"
   >
     <div
       class="flex hover:bg-atom-bg-light cursor-pointer pl-2 py-0.5"
-      @click="clickItem(index, workspaceStore.folderEntries)"
+      @click="clickItem(index, props.entries)"
     >
       <div class="pl-1 pr-2">
         <FolderIcon
@@ -63,7 +70,7 @@ function clickItem(index: number, entries: Array<IFileEntry>) {
       <div class="truncate">{{ entry.name }}</div>
     </div>
     <div v-if="entry.entries != null" class="pl-4">
-      <TreeView :entries="entry.entries" :click-handler="clickItem"></TreeView>
+      <TreeView :entries="entry.entries"></TreeView>
     </div>
   </div>
 </template>

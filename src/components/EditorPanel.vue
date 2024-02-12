@@ -74,6 +74,7 @@ async function switchBuffer(index: number) {
             dummyElement.value?.getBoundingClientRect().height;
           cursorHeight.value =
             dummyElement.value?.getBoundingClientRect().height;
+          selecting = false;
           await setCursorPosition(true);
         });
       })

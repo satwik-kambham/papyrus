@@ -18,7 +18,7 @@ const hoverTabIndex = ref(-1);
 <template>
   <div class="flex flex-col h-full">
     <div
-      class="flex overflow-x-auto custom-scrollbar z-30 bg-atom-bg-dark border-b-[1px] border-atom-black"
+      class="flex overflow-x-auto custom-scrollbar z-50 bg-atom-bg-dark border-b-[1px] border-atom-black"
     >
       <div
         class="px-2 py-1 border-r-[1px] min-w-64 justify-center flex-shrink-0 border-r-atom-black whitespace-nowrap cursor-pointer select-none flex"

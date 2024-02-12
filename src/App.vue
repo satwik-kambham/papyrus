@@ -27,7 +27,8 @@ appWindow.onResized(async () => {
     <div class="flex flex-1 overflow-hidden w-full">
       <div class="flex-none">
         <CollapsiblePanel
-          ><SideBar> <TreeView /> </SideBar
+          ><SideBar>
+            <TreeView :entries="workspaceStore.folderEntries" /> </SideBar
         ></CollapsiblePanel>
       </div>
       <div class="flex flex-col shrink grow min-w-0">
