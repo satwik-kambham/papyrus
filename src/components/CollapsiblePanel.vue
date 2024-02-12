@@ -90,7 +90,7 @@ onBeforeUnmount(() => {
       <slot></slot>
     </div>
     <div
-      class="hover:bg-atom-primary transition-colors delay-200 duration-500 absolute z-50"
+      class="hover:bg-atom-primary transition-colors delay-200 duration-500 absolute z-40"
       :class="{
         'h-full w-1 top-0 -right-1 cursor-col-resize':
           !props.horizontal && !props.inverse,

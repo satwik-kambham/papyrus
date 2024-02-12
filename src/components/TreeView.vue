@@ -4,12 +4,14 @@ import { useEditorStore } from "../stores/editor";
 import { useSettingsStore } from "../stores/settings";
 import { invoke } from "@tauri-apps/api";
 import FileIO from "../io.ts";
-import { PropType } from "vue";
+import { ref, nextTick } from "vue";
 import {
   FolderIcon,
   FolderOpenIcon,
   DocumentTextIcon,
 } from "@heroicons/vue/24/solid";
+import ContextMenu from "./ContextMenu.vue";
+import ContextMenuItem from "./ContextMenuItem.vue";
 
 const props = defineProps({
   entries: {
@@ -18,11 +20,29 @@ const props = defineProps({
   },
 });
 
+const contextMenuElement = ref<ContextMent | null>(null);
+const contextMenuVisible = ref(false);
+const contextMenuX = ref(0);
+const contextMenuY = ref(0);
+
 const workspaceStore = useWorkspaceStore();
 const editorStore = useEditorStore();
 const settingsStore = useSettingsStore();
 
 const fileIO = new FileIO(editorStore, settingsStore, workspaceStore);
+
+async function openContextMenu(
+  e: PointerEvent,
+  index: number,
+  entries: Array<IFileEntry>,
+) {
+  const currentEntry = entries[index];
+  contextMenuX.value = e.clientX;
+  contextMenuY.value = e.clientY;
+  contextMenuVisible.value = true;
+  await nextTick();
+  contextMenuElement.value.contextMenuElement.focus();
+}
 
 function clickItem(index: number, entries: Array<IFileEntry>) {
   const entry = entries[index];
@@ -55,6 +75,7 @@ function clickItem(index: number, entries: Array<IFileEntry>) {
     <div
       class="flex hover:bg-atom-bg-light cursor-pointer pl-2 py-0.5"
       @click="clickItem(index, props.entries)"
+      @contextmenu.prevent="openContextMenu($event, index, props.entries)"
     >
       <div class="pl-1 pr-2">
         <FolderIcon
@@ -72,5 +93,18 @@ function clickItem(index: number, entries: Array<IFileEntry>) {
     <div v-if="entry.entries != null" class="pl-4">
       <TreeView :entries="entry.entries"></TreeView>
     </div>
+  </div>
+  <div class="relative">
+    <ContextMenu
+      class="fixed z-50"
+      v-show="contextMenuVisible"
+      :style="{ top: contextMenuY + 'px', left: contextMenuX + 'px' }"
+      ref="contextMenuElement"
+      @context-blur="contextMenuVisible = false"
+    >
+      <ContextMenuItem>Test Item 1</ContextMenuItem>
+      <ContextMenuItem />
+      <ContextMenuItem>Test Item 2</ContextMenuItem>
+    </ContextMenu>
   </div>
 </template>
