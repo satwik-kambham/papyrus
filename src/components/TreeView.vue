@@ -102,9 +102,13 @@ function clickItem(index: number, entries: Array<IFileEntry>) {
       ref="contextMenuElement"
       @context-blur="contextMenuVisible = false"
     >
-      <ContextMenuItem>Test Item 1</ContextMenuItem>
+      <ContextMenuItem>New File</ContextMenuItem>
+      <ContextMenuItem>New Folder</ContextMenuItem>
       <ContextMenuItem />
-      <ContextMenuItem>Test Item 2</ContextMenuItem>
+      <ContextMenuItem>Rename</ContextMenuItem>
+      <ContextMenuItem>Delete</ContextMenuItem>
+      <ContextMenuItem />
+      <ContextMenuItem>Move</ContextMenuItem>
     </ContextMenu>
   </div>
 </template>
