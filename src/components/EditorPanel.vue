@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, onMounted, onUpdated } from "vue";
+import { ref, computed, nextTick, onMounted, onUpdated } from "vue";
 import { invoke } from "@tauri-apps/api";
 import { useWorkspaceStore } from "../stores/workspace";
 import { useEditorStore } from "../stores/editor";
@@ -15,14 +15,13 @@ const settingsStore = useSettingsStore();
 const editor = new Editor(editorStore, settingsStore, workspaceStore);
 const fileIO = new FileIO(editorStore, settingsStore, workspaceStore);
 
+const EditorPanelElement = ref<HTMLElement | null>(null);
 const gutterElement = ref<HTMLElement | null>(null);
 const editorElement = ref<HTMLElement | null>(null);
 const cursorElement = ref<HTMLElement | null>(null);
 const dummyElement = ref<HTMLElement | null>(null);
 const hiddenInput = ref<HTMLElement | null>(null);
 
-const currentLine = ref<Element | null>(null);
-const currentGutterLine = ref<Element | null>(null);
 const hOffset = ref(0);
 const vOffset = ref(0);
 const cursorHOffset = ref(0);
@@ -34,60 +33,58 @@ const selectionHighlights = ref<
     endHOffset: number;
   }[]
 >([]);
+const gutterWidth = ref(0);
+const cursorWidth = ref(0);
+const cursorHeight = ref(0);
+const visibleHeight = ref(
+  EditorPanelElement.value?.getBoundingClientRect().height ?? 0,
+);
+const visibleContent = ref<string[][]>([]);
+const visibleHOffset = ref(0);
+const visibleVOffset = ref(0);
+const maxVOffset = ref(0);
+const startLine = ref(0);
+const endLine = ref(0);
+
+const selectionMade = computed(() => {
+  return editor.selection_made();
+});
 
 let selecting = false;
-
-const gutterWidth = ref(0);
 
 onUpdated(() => {
   gutterWidth.value = gutterElement.value?.getBoundingClientRect().width ?? 0;
 });
 
-// Setting cursor width based on a dummy element
-const cursorWidth = ref(0);
-const cursorHeight = ref(0);
-
 settingsStore.$subscribe(async () => {
   await nextTick();
   cursorWidth.value = dummyElement.value?.getBoundingClientRect().width ?? 0;
   cursorHeight.value = dummyElement.value?.getBoundingClientRect().height ?? 0;
-  await setCursorPosition(true);
+  await setCursorPosition();
 });
 
-async function switchBuffer(index: number) {
-  await asyncQueue.enqueue(async () => {
-    invoke<number>("create_buffer_from_file_path", {
-      path: workspaceStore.openEditors[index].entry?.path,
-    })
-      .then((buffer_idx) => {
-        editorStore.fileEntry = workspaceStore.openEditors[index].entry!;
-        editorStore.encoding = "utf8";
-        editorStore.bufferIdx = buffer_idx;
-        invoke<IHighlightedText>("get_highlighted_text", {
-          bufferIdx: editorStore.bufferIdx,
-        }).then(async (content) => {
-          editorStore.highlightedContent = content.text;
-          const scroll = workspaceStore.openEditors[index].scroll;
-          hOffset.value = scroll.hOffset;
-          vOffset.value = scroll.vOffset;
-          cursorHeight.value =
-            dummyElement.value?.getBoundingClientRect().height;
-          cursorHeight.value =
-            dummyElement.value?.getBoundingClientRect().height;
-          selecting = false;
-          await setCursorPosition(true);
-        });
-      })
-      .catch((error) => {
-        editorStore.encoding = "Unknown";
-        console.error(error);
-      });
-  });
-}
+workspaceStore.$subscribe(async () => {
+  await nextTick();
+  visibleHeight.value =
+    EditorPanelElement.value?.getBoundingClientRect().height ?? 0;
+  await updateVisibleContent();
+});
+
+editorStore.$subscribe(async () => {
+  await nextTick();
+  await updateVisibleContent();
+});
+
+settingsStore.$subscribe(async () => {
+  await nextTick();
+  await updateVisibleContent();
+});
 
 onMounted(async () => {
   if (workspaceStore.currentEditorIndex != -1) {
     await switchBuffer(workspaceStore.currentEditorIndex);
+    await nextTick();
+    await updateVisibleContent();
   }
 });
 
@@ -95,6 +92,14 @@ workspaceStore.$onAction((context) => {
   context.after(async () => {
     if (context.name === "switchEditor") {
       await switchBuffer(workspaceStore.currentEditorIndex);
+    }
+  });
+});
+
+workspaceStore.$onAction((context) => {
+  context.after(async () => {
+    if (context.name === "updateSelection") {
+      await setCursorPosition();
     }
   });
 });
@@ -134,6 +139,58 @@ class AsyncQueue {
 
 const asyncQueue = new AsyncQueue();
 
+async function updateVisibleContent() {
+  const prevStartLine = startLine.value;
+  const prevEndLine = endLine.value;
+  startLine.value = Math.floor(vOffset.value / cursorHeight.value);
+  endLine.value =
+    Math.ceil((vOffset.value + visibleHeight.value) / cursorHeight.value) - 1;
+  visibleContent.value = editorStore.highlightedContent.slice(
+    startLine.value,
+    endLine.value + 1,
+  );
+  visibleVOffset.value = vOffset.value - startLine.value * cursorHeight.value;
+  visibleHOffset.value = hOffset.value;
+  maxVOffset.value =
+    editorStore.highlightedContent.length * cursorHeight.value -
+    visibleHeight.value +
+    50;
+  if (prevStartLine != startLine.value || prevEndLine != endLine.value) {
+    await setCursorPosition();
+  }
+}
+
+async function switchBuffer(index: number) {
+  await asyncQueue.enqueue(async () => {
+    invoke<number>("create_buffer_from_file_path", {
+      path: workspaceStore.openEditors[index].entry?.path,
+    })
+      .then((buffer_idx) => {
+        editorStore.fileEntry = workspaceStore.openEditors[index].entry!;
+        editorStore.encoding = "utf8";
+        editorStore.bufferIdx = buffer_idx;
+        invoke<IHighlightedText>("get_highlighted_text", {
+          bufferIdx: editorStore.bufferIdx,
+        }).then(async (content) => {
+          editorStore.highlightedContent = content.text;
+          const scroll = workspaceStore.openEditors[index].scroll;
+          hOffset.value = scroll.hOffset;
+          vOffset.value = scroll.vOffset;
+          cursorHeight.value =
+            dummyElement.value?.getBoundingClientRect().height ?? 0;
+          cursorHeight.value =
+            dummyElement.value?.getBoundingClientRect().height ?? 0;
+          selecting = false;
+          await setCursorPosition();
+        });
+      })
+      .catch((error) => {
+        editorStore.encoding = "Unknown";
+        console.error(error);
+      });
+  });
+}
+
 // Clamp value to the range from min to max
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -147,13 +204,7 @@ function wheel_event(e: WheelEvent) {
       e.currentTarget!.parentNode.getBoundingClientRect().width,
     0,
   );
-
-  vOffset.value = clamp(
-    vOffset.value - e.deltaY * 0.5,
-    -e.currentTarget!.getBoundingClientRect().height +
-      e.currentTarget!.parentNode.getBoundingClientRect().height,
-    0,
-  );
+  vOffset.value = clamp(vOffset.value + e.deltaY * 0.5, 0, maxVOffset.value);
   workspaceStore.openEditors[workspaceStore.currentEditorIndex].scroll = {
     hOffset: hOffset.value,
     vOffset: vOffset.value,
@@ -161,12 +212,15 @@ function wheel_event(e: WheelEvent) {
 }
 
 // Calculate offsets given row and column
+// Expects row to be within startLine and endLine
 async function calculateOffsets(
   row: number,
   column: number,
 ): Promise<number[]> {
   let tempColumn = column;
-  let tokens = editorElement.value!.children[row].firstChild?.childNodes ?? [];
+  let tokens =
+    editorElement.value!.children[row - startLine.value].firstChild
+      ?.childNodes ?? [];
   let currentToken = null;
   for (let i = 0; i < tokens.length; i++) {
     const element = tokens[i];
@@ -177,42 +231,40 @@ async function calculateOffsets(
     tempColumn -= element.textContent?.length ?? 0;
   }
 
+  const verticalOffset =
+    editorElement.value!.children[row - startLine.value].offsetTop +
+    vOffset.value -
+    visibleVOffset.value;
   if (currentToken!.firstChild != null) {
     let range = document.createRange();
     range.setStart(currentToken!.firstChild, 0);
     range.setEnd(currentToken!.firstChild, tempColumn);
 
-    const verticalOffset = editorElement.value!.children[row].offsetTop;
     const horizontalOffset =
       range.getBoundingClientRect().right -
       cursorElement.value?.parentNode!.getBoundingClientRect().left -
       hOffset.value;
     return [verticalOffset, horizontalOffset];
   } else {
-    const verticalOffset = editorElement.value!.children[row].offsetTop;
     const horizontalOffset = 0;
     return [verticalOffset, horizontalOffset];
   }
 }
 
 // Set cursor position at given row and column
-async function setCursorPosition(selectionChanged: boolean) {
+async function setCursorPosition() {
   await nextTick();
-
   const s = workspaceStore.currentSelection;
-  const cursorOffsets = await calculateOffsets(s.end.row, s.end.column);
-  cursorVOffset.value = cursorOffsets[0];
-  cursorHOffset.value = cursorOffsets[1];
 
-  if (currentLine.value != null) {
-    currentLine.value.classList.remove("bg-atom-bg-light");
-    currentGutterLine.value!.classList.remove("bg-atom-bg-light");
-    currentGutterLine.value!.classList.remove("text-atom-text-dark");
+  // Setting cursor position
+  if (s.end.row >= startLine.value && s.end.row <= endLine.value) {
+    const cursorOffsets = await calculateOffsets(s.end.row, s.end.column);
+    cursorVOffset.value = cursorOffsets[0];
+    cursorHOffset.value = cursorOffsets[1];
   }
-  currentLine.value = editorElement.value!.children[s.end.row];
-  currentGutterLine.value = gutterElement.value!.children[s.end.row];
 
-  if (selectionChanged && editor.selection_made()) {
+  // Setting selection highlights
+  if (editor.selection_made()) {
     let highlights = [];
     let start = s.start;
     let end = s.end;
@@ -226,65 +278,64 @@ async function setCursorPosition(selectionChanged: boolean) {
       end = buf;
     }
 
-    const startOffsets = await calculateOffsets(start.row, start.column);
-    const endOffsets = await calculateOffsets(end.row, end.column);
+    if (end.row >= startLine.value || start.row <= endLine.value) {
+      let start_row = start.row;
+      let end_row = end.row;
+      let start_column = start.column;
+      let end_column = end.column;
+      if (start.row < startLine.value) {
+        start_row = startLine.value;
+        start_column = 0;
+      }
+      if (end.row > endLine.value) {
+        end_row = endLine.value;
+        end_column = await editor.get_row_length(end_row);
+      }
 
-    if (start.row == end.row) {
-      highlights.push({
-        vOffset: startOffsets[0],
-        startHOffset: startOffsets[1],
-        endHOffset: endOffsets[1],
-      });
-    } else {
-      let offsets = await calculateOffsets(
-        start.row,
-        await editor.get_row_length(start.row),
-      );
-      highlights.push({
-        vOffset: startOffsets[0],
-        startHOffset: startOffsets[1],
-        endHOffset: offsets[1],
-      });
-      for (let i = start.row + 1; i < end.row; i++) {
-        let startHOffset = (await calculateOffsets(i, 0))[1];
-        offsets = await calculateOffsets(i, await editor.get_row_length(i));
+      const startOffsets = await calculateOffsets(start_row, start_column);
+      const endOffsets = await calculateOffsets(end_row, end_column);
+
+      if (start_row == end_row) {
         highlights.push({
-          vOffset: offsets[0],
-          startHOffset: startHOffset,
+          vOffset: startOffsets[0],
+          startHOffset: startOffsets[1],
+          endHOffset: endOffsets[1],
+        });
+      } else {
+        let offsets = await calculateOffsets(
+          start_row,
+          await editor.get_row_length(start_row),
+        );
+        highlights.push({
+          vOffset: startOffsets[0],
+          startHOffset: startOffsets[1],
           endHOffset: offsets[1],
         });
+        for (let i = start_row + 1; i < end_row; i++) {
+          let startHOffset = (await calculateOffsets(i, 0))[1];
+          offsets = await calculateOffsets(i, await editor.get_row_length(i));
+          highlights.push({
+            vOffset: offsets[0],
+            startHOffset: startHOffset,
+            endHOffset: offsets[1],
+          });
+        }
+        offsets = await calculateOffsets(end_row, 0);
+        highlights.push({
+          vOffset: endOffsets[0],
+          startHOffset: offsets[1],
+          endHOffset: endOffsets[1],
+        });
       }
-      offsets = await calculateOffsets(end.row, 0);
-      highlights.push({
-        vOffset: endOffsets[0],
-        startHOffset: offsets[1],
-        endHOffset: endOffsets[1],
-      });
-    }
 
-    selectionHighlights.value = highlights;
-  } else if (!selectionChanged) {
-    /* empty */
+      selectionHighlights.value = highlights;
+    }
   } else {
     selectionHighlights.value = [];
   }
 
-  if (!editor.selection_made()) {
-    currentLine.value.classList.add("bg-atom-bg-light");
-    currentGutterLine.value.classList.add("bg-atom-bg-light");
-    currentGutterLine.value.classList.add("text-atom-text-dark");
-  }
-
   hiddenInput.value?.focus();
 }
-
-workspaceStore.$onAction((context) => {
-  context.after((result) => {
-    if (context.name === "updateSelection") {
-      setCursorPosition(result!);
-    }
-  });
-});
 
 function get_mouse_position(e: MouseEvent) {
   let range;
@@ -328,6 +379,7 @@ function get_mouse_position(e: MouseEvent) {
     children.slice(0, current).forEach((child) => {
       column += child.textContent.length;
     });
+    row += startLine.value;
   } else if (textNode?.nodeType === 1) {
     // If user clicked outside the text
     // Calculating row
@@ -339,6 +391,7 @@ function get_mouse_position(e: MouseEvent) {
       // Setting column to end of line
       column = textNode.textContent.length;
     }
+    row += startLine.value;
   }
 
   return {
@@ -476,7 +529,7 @@ async function key_event(e: KeyboardEvent) {
 </script>
 <template>
   <div class="h-full" v-if="workspaceStore.currentEditorIndex != -1">
-    <div class="flex h-full">
+    <div ref="EditorPanelElement" class="flex h-full">
       <div
         class="h-full relative bg-atom-bg z-20 w-0"
         :style="{ width: gutterWidth + 'px' }"
@@ -485,17 +538,27 @@ async function key_event(e: KeyboardEvent) {
           ref="gutterElement"
           class="min-h-full font-code antialiased leading-normal overflow-visible h-fit pointer-events-none select-none absolute w-fit text-atom-text-light"
           :style="{
-            top: vOffset + 'px',
+            top: -visibleVOffset + 'px',
             'font-size': settingsStore.editorFontSize + 'px',
           }"
         >
           <div
             class="px-5"
-            v-for="(_, index) in editorStore.highlightedContent"
+            v-for="(_, index) in visibleContent"
             :key="index"
+            :class="{
+              'text-atom-text-dark bg-atom-bg-light':
+                startLine + index ==
+                  workspaceStore.currentSelection.start.row && !selectionMade,
+            }"
           >
             <span class="inline-block">
-              {{ index + 1 }}
+              {{ startLine + index + 1 }}
+            </span>
+          </div>
+          <div class="px-5 opacity-0">
+            <span class="inline-block">
+              {{ editorStore.highlightedContent.length + 1 }}
             </span>
           </div>
         </div>
@@ -510,15 +573,20 @@ async function key_event(e: KeyboardEvent) {
           @mousemove="mouse_move"
           @mouseup="mouse_up"
           :style="{
-            top: vOffset + 'px',
-            left: hOffset + 'px',
+            top: -visibleVOffset + 'px',
+            left: visibleHOffset + 'px',
             'font-size': settingsStore.editorFontSize + 'px',
           }"
         >
           <div
             class=""
-            v-for="(line, index) in editorStore.highlightedContent"
+            v-for="(line, index) in visibleContent"
             :key="index"
+            :class="{
+              'text-atom-text-dark bg-atom-bg-light':
+                startLine + index ==
+                  workspaceStore.currentSelection.start.row && !selectionMade,
+            }"
           >
             <span class="inline-block whitespace-pre">
               <span
@@ -535,8 +603,8 @@ async function key_event(e: KeyboardEvent) {
           ref="cursorElement"
           class="absolute font-code antialiased leading-normal border-atom-primary border-l-2 pointer-events-none select-none animate-blink z-20"
           :style="{
-            top: vOffset + cursorVOffset + 'px',
-            left: hOffset + cursorHOffset + 'px',
+            top: cursorVOffset - vOffset + 'px',
+            left: visibleHOffset + cursorHOffset + 'px',
             width: cursorWidth + 'px',
             height: cursorHeight + 'px',
             'font-size': settingsStore.editorFontSize + 'px',
@@ -564,8 +632,8 @@ async function key_event(e: KeyboardEvent) {
           <div
             class="absolute bg-atom-highlight z-0"
             :style="{
-              top: vOffset + highlight.vOffset + 'px',
-              left: hOffset + highlight.startHOffset + 'px',
+              top: -vOffset + highlight.vOffset + 'px',
+              left: visibleHOffset + highlight.startHOffset + 'px',
               width: highlight.endHOffset - highlight.startHOffset + 'px',
               height: cursorHeight + 'px',
             }"
