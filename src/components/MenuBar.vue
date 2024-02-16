@@ -13,6 +13,7 @@ import {
 } from "@heroicons/vue/24/outline";
 import FileIO from "../io.ts";
 import Window from "../window";
+import Editor from "../editor";
 
 const workspaceStore = useWorkspaceStore();
 const editorStore = useEditorStore();
@@ -20,6 +21,7 @@ const settingsStore = useSettingsStore();
 
 const fileIO = new FileIO(editorStore, settingsStore, workspaceStore);
 const window = new Window(workspaceStore);
+const editor = new Editor(editorStore, settingsStore, workspaceStore);
 </script>
 
 <template>
@@ -37,11 +39,13 @@ const window = new Window(workspaceStore);
     </MenuItem>
     <MenuItem name="Edit">
       <SubMenu>
-        <SubMenuItem @click="">Undo</SubMenuItem>
-        <SubMenuItem @click="">Redo</SubMenuItem>
+        <SubMenuItem @click="editor.undo()">Undo</SubMenuItem>
+        <SubMenuItem @click="editor.redo()">Redo</SubMenuItem>
         <SubMenuItem />
-        <SubMenuItem @click="">Add Indent</SubMenuItem>
-        <SubMenuItem @click="">Remove Indent</SubMenuItem>
+        <SubMenuItem @click="editor.add_indentation()">Add Indent</SubMenuItem>
+        <SubMenuItem @click="editor.remove_indentation()"
+          >Remove Indent</SubMenuItem
+        >
       </SubMenu>
     </MenuItem>
     <div data-tauri-drag-region class="flex-1"></div>
