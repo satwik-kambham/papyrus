@@ -30,7 +30,7 @@ const selectionHighlights = ref<
   {
     vOffset: number;
     startHOffset: number;
-    endHOffset: number;
+    endHOffset?: number;
   }[]
 >([]);
 const gutterWidth = ref(0);
@@ -60,7 +60,7 @@ settingsStore.$subscribe(async () => {
   await nextTick();
   cursorWidth.value = dummyElement.value?.getBoundingClientRect().width ?? 0;
   cursorHeight.value = dummyElement.value?.getBoundingClientRect().height ?? 0;
-  await setCursorPosition();
+  await updateVisibleContent();
 });
 
 workspaceStore.$subscribe(async () => {
@@ -71,11 +71,6 @@ workspaceStore.$subscribe(async () => {
 });
 
 editorStore.$subscribe(async () => {
-  await nextTick();
-  await updateVisibleContent();
-});
-
-settingsStore.$subscribe(async () => {
   await nextTick();
   await updateVisibleContent();
 });
@@ -92,14 +87,6 @@ workspaceStore.$onAction((context) => {
   context.after(async () => {
     if (context.name === "switchEditor") {
       await switchBuffer(workspaceStore.currentEditorIndex);
-    }
-  });
-});
-
-workspaceStore.$onAction((context) => {
-  context.after(async () => {
-    if (context.name === "updateSelection") {
-      await setCursorPosition();
     }
   });
 });
@@ -140,8 +127,6 @@ class AsyncQueue {
 const asyncQueue = new AsyncQueue();
 
 async function updateVisibleContent() {
-  const prevStartLine = startLine.value;
-  const prevEndLine = endLine.value;
   startLine.value = Math.floor(vOffset.value / cursorHeight.value);
   endLine.value =
     Math.ceil((vOffset.value + visibleHeight.value) / cursorHeight.value) - 1;
@@ -155,9 +140,8 @@ async function updateVisibleContent() {
     editorStore.highlightedContent.length * cursorHeight.value -
     visibleHeight.value +
     50;
-  if (prevStartLine != startLine.value || prevEndLine != endLine.value) {
-    await setCursorPosition();
-  }
+  await nextTick();
+  setCursorPosition();
 }
 
 async function switchBuffer(index: number) {
@@ -181,7 +165,8 @@ async function switchBuffer(index: number) {
           cursorHeight.value =
             dummyElement.value?.getBoundingClientRect().height ?? 0;
           selecting = false;
-          await setCursorPosition();
+          await nextTick();
+          await updateVisibleContent();
         });
       })
       .catch((error) => {
@@ -213,10 +198,7 @@ function wheel_event(e: WheelEvent) {
 
 // Calculate offsets given row and column
 // Expects row to be within startLine and endLine
-async function calculateOffsets(
-  row: number,
-  column: number,
-): Promise<number[]> {
+function calculateOffsets(row: number, column: number) {
   let tempColumn = column;
   let tokens =
     editorElement.value!.children[row - startLine.value].firstChild
@@ -252,13 +234,12 @@ async function calculateOffsets(
 }
 
 // Set cursor position at given row and column
-async function setCursorPosition() {
-  await nextTick();
+function setCursorPosition() {
   const s = workspaceStore.currentSelection;
 
   // Setting cursor position
   if (s.end.row >= startLine.value && s.end.row <= endLine.value) {
-    const cursorOffsets = await calculateOffsets(s.end.row, s.end.column);
+    const cursorOffsets = calculateOffsets(s.end.row, s.end.column);
     cursorVOffset.value = cursorOffsets[0];
     cursorHOffset.value = cursorOffsets[1];
   }
@@ -278,7 +259,7 @@ async function setCursorPosition() {
       end = buf;
     }
 
-    if (end.row >= startLine.value || start.row <= endLine.value) {
+    if (!(end.row < startLine.value || start.row > endLine.value)) {
       let start_row = start.row;
       let end_row = end.row;
       let start_column = start.column;
@@ -289,11 +270,14 @@ async function setCursorPosition() {
       }
       if (end.row > endLine.value) {
         end_row = endLine.value;
-        end_column = await editor.get_row_length(end_row);
+        end_column = -1;
       }
 
-      const startOffsets = await calculateOffsets(start_row, start_column);
-      const endOffsets = await calculateOffsets(end_row, end_column);
+      const startOffsets = calculateOffsets(start_row, start_column);
+      const endOffsets = calculateOffsets(
+        end_row,
+        end_column != -1 ? end_column : 0,
+      );
 
       if (start_row == end_row) {
         highlights.push({
@@ -302,34 +286,37 @@ async function setCursorPosition() {
           endHOffset: endOffsets[1],
         });
       } else {
-        let offsets = await calculateOffsets(
-          start_row,
-          await editor.get_row_length(start_row),
-        );
+        let offsets = calculateOffsets(start_row, 0);
         highlights.push({
           vOffset: startOffsets[0],
           startHOffset: startOffsets[1],
-          endHOffset: offsets[1],
         });
         for (let i = start_row + 1; i < end_row; i++) {
-          let startHOffset = (await calculateOffsets(i, 0))[1];
-          offsets = await calculateOffsets(i, await editor.get_row_length(i));
+          let startHOffset = calculateOffsets(i, 0)[1];
+          offsets = calculateOffsets(i, 0);
           highlights.push({
             vOffset: offsets[0],
             startHOffset: startHOffset,
-            endHOffset: offsets[1],
           });
         }
-        offsets = await calculateOffsets(end_row, 0);
-        highlights.push({
-          vOffset: endOffsets[0],
-          startHOffset: offsets[1],
-          endHOffset: endOffsets[1],
-        });
+        if (end_column == -1) {
+          offsets = calculateOffsets(end_row, 0);
+          highlights.push({
+            vOffset: endOffsets[0],
+            startHOffset: offsets[1],
+          });
+        } else {
+          offsets = calculateOffsets(end_row, 0);
+          highlights.push({
+            vOffset: endOffsets[0],
+            startHOffset: offsets[1],
+            endHOffset: endOffsets[1],
+          });
+        }
       }
-
-      selectionHighlights.value = highlights;
     }
+
+    selectionHighlights.value = highlights;
   } else {
     selectionHighlights.value = [];
   }
@@ -634,8 +621,10 @@ async function key_event(e: KeyboardEvent) {
             :style="{
               top: -vOffset + highlight.vOffset + 'px',
               left: visibleHOffset + highlight.startHOffset + 'px',
-              width: highlight.endHOffset - highlight.startHOffset + 'px',
               height: cursorHeight + 'px',
+              width: highlight.endHOffset
+                ? highlight.endHOffset - highlight.startHOffset + 'px'
+                : '100%',
             }"
             v-for="(highlight, index) in selectionHighlights"
             :key="index"
