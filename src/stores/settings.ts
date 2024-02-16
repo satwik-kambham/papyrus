@@ -13,12 +13,12 @@ export enum AutoSaveType {
 }
 
 export const useSettingsStore = defineStore("settings", () => {
-  const editorFontSize = ref(28);
+  const editorFontSize = ref(18);
   const editorFontFamily = ref(
     "Consolas, ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
   );
   const editorTheme = ref("");
-  const tabSize = ref(2);
+  const tabSize = ref(4);
   const autoSave = ref(AutoSaveType.OFF);
   const autoSaveDelay = ref(1000);
   const eolSequence = ref(EOLSequence.CRLF);
