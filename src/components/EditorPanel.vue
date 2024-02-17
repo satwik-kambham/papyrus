@@ -127,9 +127,16 @@ class AsyncQueue {
 const asyncQueue = new AsyncQueue();
 
 async function updateVisibleContent() {
-  startLine.value = Math.floor(vOffset.value / cursorHeight.value);
-  endLine.value =
-    Math.ceil((vOffset.value + visibleHeight.value) / cursorHeight.value) - 1;
+  startLine.value = clamp(
+    Math.floor(vOffset.value / cursorHeight.value),
+    0,
+    editorStore.highlightedContent.length - 1,
+  );
+  endLine.value = clamp(
+    Math.ceil((vOffset.value + visibleHeight.value) / cursorHeight.value) - 1,
+    0,
+    editorStore.highlightedContent.length - 1,
+  );
   visibleContent.value = editorStore.highlightedContent.slice(
     startLine.value,
     endLine.value + 1,
@@ -139,7 +146,8 @@ async function updateVisibleContent() {
   maxVOffset.value =
     editorStore.highlightedContent.length * cursorHeight.value -
     visibleHeight.value +
-    50;
+    visibleHeight.value / 2;
+  if (maxVOffset.value < 0) maxVOffset.value = 0;
   await nextTick();
   setCursorPosition();
 }
