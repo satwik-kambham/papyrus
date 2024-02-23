@@ -9,7 +9,9 @@ const props = defineProps<{
   <div class="">
     <Popover class="relative">
       <PopoverButton>
-        <div class="px-2 cursor-pointer hover:bg-atom-bg">{{ props.name }}</div>
+        <div class="px-4 py-1 cursor-pointer hover:bg-atom-bg-hover">
+          {{ props.name }}
+        </div>
       </PopoverButton>
       <PopoverPanel class="absolute z-50 bg-atom-bg-dark">
         <PopoverButton><slot></slot></PopoverButton>

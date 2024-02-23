@@ -25,7 +25,7 @@ const editor = new Editor(editorStore, settingsStore, workspaceStore);
 </script>
 
 <template>
-  <div data-tauri-drag-region class="bg-atom-bg-dark p-1 flex select-none">
+  <div data-tauri-drag-region class="bg-atom-bg-dark flex select-none text-xs">
     <MenuItem name="File">
       <SubMenu>
         <SubMenuItem @click="fileIO.openFileDialog()">Open File</SubMenuItem>
@@ -50,20 +50,20 @@ const editor = new Editor(editorStore, settingsStore, workspaceStore);
     </MenuItem>
     <div data-tauri-drag-region class="flex-1"></div>
     <div
-      class="px-2 cursor-pointer hover:bg-atom-bg"
+      class="px-2 py-1 cursor-pointer hover:bg-atom-bg-hover"
       @click="window.minimize()"
     >
       <MinusIcon class="h-full w-4" />
     </div>
     <div
-      class="px-2 cursor-pointer hover:bg-atom-bg"
+      class="px-2 py-1 cursor-pointer hover:bg-atom-bg-hover"
       @click="window.maximize()"
     >
       <StopIcon v-if="!workspaceStore.maximized" class="h-full w-4" />
       <Square2StackIcon v-else class="h-full w-4" />
     </div>
     <div
-      class="px-2 cursor-pointer hover:bg-atom-highlight-Red hover:text-black"
+      class="px-2 py-1 cursor-pointer hover:bg-atom-highlight-Red hover:text-black"
       @click="window.close()"
     >
       <XMarkIcon class="h-full w-4" />

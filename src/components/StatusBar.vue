@@ -29,19 +29,16 @@ function changeEOLSequence() {
 
 <template>
   <div
-    class="bg-atom-bg-dark flex p-1 text-sm select-none border-t-[1px] border-atom-black"
+    class="bg-atom-bg-dark flex px-1 select-none border-t-[1px] border-atom-black text-xs"
   >
-    <div v-if="editorStore.fileEntry != null">
+    <div
+      class="p-1.5 hover:bg-atom-bg-hover"
+      v-if="editorStore.fileEntry != null"
+    >
       {{ editorStore.fileEntry.name }}
     </div>
-    <div class="grow"></div>
-    <div class="px-1.5 flex">
-      Font Size: {{ settingsStore.editorFontSize }}
-      <div class="px-1 hover:bg-atom-bg" @click="increaseFontSize">+</div>
-      <div class="px-1 hover:bg-atom-bg" @click="decreaseFontSize">-</div>
-    </div>
     <div
-      class="px-1.5 hover:bg-atom-bg"
+      class="p-1.5 hover:bg-atom-bg-hover"
       v-if="workspaceStore.currentEditorIndex != -1"
     >
       Ln
@@ -49,13 +46,31 @@ function changeEOLSequence() {
       : Col
       {{ workspaceStore.currentSelection.end.column + 1 }}
     </div>
-    <div class="px-1.5 hover:bg-atom-bg" @click="changeTabSpacing">
+    <div class="grow"></div>
+    <div class="px-1.5 flex">
+      <div class="px-1 py-1.5">
+        Font Size: {{ settingsStore.editorFontSize }}
+      </div>
+      <div
+        class="mx-1 px-1 py-1.5 hover:bg-atom-bg-hover"
+        @click="increaseFontSize"
+      >
+        +
+      </div>
+      <div
+        class="mx-1 px-1 py-1.5 hover:bg-atom-bg-hover"
+        @click="decreaseFontSize"
+      >
+        -
+      </div>
+    </div>
+    <div class="p-1.5 hover:bg-atom-bg-hover" @click="changeTabSpacing">
       {{ settingsStore.tabSize }} spaces
     </div>
-    <div class="px-1.5 hover:bg-atom-bg" @click="changeEOLSequence">
+    <div class="p-1.5 hover:bg-atom-bg-hover" @click="changeEOLSequence">
       <div v-if="settingsStore.eolSequence == EOLSequence.LF">LF</div>
       <div v-else>CRLF</div>
     </div>
-    <div class="px-1.5 hover:bg-atom-bg">{{ editorStore.encoding }}</div>
+    <div class="p-1.5 hover:bg-atom-bg-hover">{{ editorStore.encoding }}</div>
   </div>
 </template>

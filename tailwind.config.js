@@ -4,14 +4,16 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        code: "'Monaspace Neon Var', Consolas, ui-monospace, monospace",
+        code: "Consolas, 'Monaspace Neon Var', ui-monospace, monospace",
       },
       colors: {
         atom: {
           black: "#181a1f",
           "bg-dark": "#21252b",
           bg: "#282c34",
+          "bg-hover": "#2f333d",
           "bg-light": "#2c313c",
+          "bg-icon": "#9da5b4",
           highlight: "#3e4451",
           text: "#abb2bf",
           "text-dark": "#58727d",

@@ -71,19 +71,19 @@ function clickItem(index: number, entries: Array<IFileEntry>) {
 
 <template>
   <div
-    class="flex flex-col"
+    class="flex flex-col text-sm leading-7"
     v-for="(entry, index) in props.entries"
     :key="index"
   >
     <div
-      class="flex hover:bg-atom-bg-light cursor-pointer pl-2 py-0.5"
+      class="flex hover:bg-atom-bg-hover cursor-pointer pl-2"
       @click="clickItem(index, props.entries)"
       @contextmenu.prevent="openContextMenu($event, index, props.entries)"
     >
       <div class="pl-1 pr-2">
         <FolderIcon
           v-if="entry.is_dir && entry.entries == null"
-          class="h-full w-4"
+          class="h-full w-4 text-atom-bg-icon"
         />
         <FolderOpenIcon
           v-else-if="entry.is_dir && entry.entries != null"

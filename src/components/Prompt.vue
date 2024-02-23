@@ -38,10 +38,14 @@ async function submitted() {
       <DialogPanel
         class="w-3/4 bg-atom-bg rounded-2xl py-2 px-4 shadow-md shadow-atom-bg mt-10"
       >
-        <DialogTitle class="text-md">{{ editorStore.promptTitle }}</DialogTitle>
-        <DialogDescription class="text-sm italic mb-2">{{
-          editorStore.promptDescription
-        }}</DialogDescription>
+        <div class="flex mb-2">
+          <DialogTitle class="text-sm px-2"
+            >{{ editorStore.promptTitle }}:</DialogTitle
+          >
+          <DialogDescription class="text-sm italic text-atom-text-dark">{{
+            editorStore.promptDescription
+          }}</DialogDescription>
+        </div>
         <input
           class="border bg-atom-bg-dark border-atom-highlight rounded px-4 py-2 focus:outline-none focus:border-atom-primary w-full"
           v-model="editorStore.promptResponse"

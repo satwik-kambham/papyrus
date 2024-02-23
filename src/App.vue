@@ -19,7 +19,7 @@ appWindow.onResized(async () => {
 
 <template>
   <div
-    class="bg-atom-bg-dark text-atom-text h-screen flex flex-col border-2 border-atom-bg-light overflow-y-hidden w-full text-sm"
+    class="bg-atom-bg-dark text-atom-text font-sans antialiased h-screen flex flex-col border-2 border-atom-bg-light overflow-y-hidden w-full text-sm"
     :class="workspaceStore.maximized ? 'rounded-none' : 'rounded-xl'"
   >
     <div data-tauri-drag-region class="w-full">

@@ -532,27 +532,35 @@ async function key_event(e: KeyboardEvent) {
       >
         <div
           ref="gutterElement"
-          class="min-h-full font-code antialiased leading-normal overflow-visible h-fit pointer-events-none select-none absolute w-fit text-atom-text-light"
+          class="min-h-full font-code text-right antialiased leading-normal overflow-visible h-fit pointer-events-none select-none absolute w-fit text-atom-text-light"
           :style="{
             top: -visibleVOffset + 'px',
             'font-size': settingsStore.editorFontSize + 'px',
           }"
         >
           <div
-            class="px-5"
+            class="pr-8 pl-8"
             v-for="(_, index) in visibleContent"
             :key="index"
             :class="{
               'text-atom-text-dark bg-atom-bg-light':
-                startLine + index ==
-                  workspaceStore.currentSelection.start.row && !selectionMade,
+                startLine + index >=
+                  (workspaceStore.currentSelection.start.row <
+                  workspaceStore.currentSelection.end.row
+                    ? workspaceStore.currentSelection.start.row
+                    : workspaceStore.currentSelection.end.row) &&
+                startLine + index <=
+                  (workspaceStore.currentSelection.start.row <
+                  workspaceStore.currentSelection.end.row
+                    ? workspaceStore.currentSelection.end.row
+                    : workspaceStore.currentSelection.start.row),
             }"
           >
             <span class="inline-block">
               {{ startLine + index + 1 }}
             </span>
           </div>
-          <div class="px-5 opacity-0">
+          <div class="pr-8 pl-2 opacity-0">
             <span class="inline-block">
               {{ editorStore.highlightedContent.length + 1 }}
             </span>
