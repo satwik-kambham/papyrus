@@ -194,7 +194,8 @@ function wheel_event(e: WheelEvent) {
   hOffset.value = clamp(
     hOffset.value - e.deltaX * 0.5,
     -e.currentTarget!.getBoundingClientRect().width +
-      e.currentTarget!.parentNode.getBoundingClientRect().width,
+      e.currentTarget!.parentNode.getBoundingClientRect().width -
+      50,
     0,
   );
   vOffset.value = clamp(vOffset.value + e.deltaY * 0.5, 0, maxVOffset.value);

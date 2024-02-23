@@ -75,6 +75,19 @@ export default class FileIO {
       });
   }
 
+  async setFileTree(workspaceFolder) {
+    invoke<Array<IFileEntry>>("get_folder_content", {
+      path: workspaceFolder,
+    })
+      .then((entries) => {
+        this.workspaceStore.workspaceFolder = workspaceFolder;
+        this.workspaceStore.folderEntries = entries;
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }
+
   async openFolder() {
     const selected = await open({
       directory: true,
@@ -83,16 +96,7 @@ export default class FileIO {
     });
     if (selected !== null && !Array.isArray(selected)) {
       // user selected a single folder
-      invoke<Array<IFileEntry>>("get_folder_content", {
-        path: selected,
-      })
-        .then((entries) => {
-          this.workspaceStore.workspaceFolder = selected;
-          this.workspaceStore.folderEntries = entries;
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+      this.setFileTree(selected);
     }
   }
 
@@ -128,5 +132,50 @@ export default class FileIO {
           console.error(error);
         });
     }
+  }
+
+  async relative(from, to) {
+    const path = await invoke<string>("get_relative_path", {
+      from: from,
+      to: to,
+    });
+    return path;
+  }
+
+  async parent(path) {
+    const parentPath = await invoke<string>("get_parent", {
+      path: path,
+    });
+    return parentPath;
+  }
+
+  async join(start, end) {
+    const path = await invoke<string>("join_paths", {
+      start: start,
+      end: end,
+    });
+    return path;
+  }
+
+  async createNewFile(path, context) {
+    const absolutePath = await this.join(
+      this.workspaceStore.workspaceFolder,
+      path,
+    );
+    await invoke("create_file", {
+      path: absolutePath,
+    });
+    this.setFileTree(this.workspaceStore.workspaceFolder);
+  }
+
+  async createNewFolder(path, context) {
+    const absolutePath = await this.join(
+      this.workspaceStore.workspaceFolder,
+      path,
+    );
+    await invoke("create_folder", {
+      path: absolutePath,
+    });
+    this.setFileTree(this.workspaceStore.workspaceFolder);
   }
 }

@@ -79,6 +79,36 @@ pub fn get_file_info(path: String) -> file_handling::FileEntry {
 }
 
 #[tauri::command]
+pub fn get_relative_path(from: String, to: String) -> Result<String, String> {
+    let path = file_handling::get_relative_path(&from, &to).map_err(|err| err.to_string())?;
+    Ok(path)
+}
+
+#[tauri::command]
+pub fn get_parent(path: String) -> Result<String, String> {
+    let parent = file_handling::get_parent(&path).map_err(|err| err.to_string())?;
+    Ok(parent)
+}
+
+#[tauri::command]
+pub fn join_paths(start: String, end: String) -> Result<String, String> {
+    let path = file_handling::join_paths(&start, &end).map_err(|err| err.to_string())?;
+    Ok(path)
+}
+
+#[tauri::command]
+pub fn create_file(path: String) -> Result<(), String> {
+    file_handling::create_file(&path).map_err(|err| err.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn create_folder(path: String) -> Result<(), String> {
+    file_handling::create_folder(&path).map_err(|err| err.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
 pub fn create_buffer_from_file_path(path: String) -> Result<usize, String> {
     let mut editor_state = EDITOR_STATE.get().lock().unwrap();
     for (idx, buffer) in editor_state.text_buffers.iter().enumerate() {

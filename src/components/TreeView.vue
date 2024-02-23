@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import { ref, nextTick } from "vue";
 import { useWorkspaceStore } from "../stores/workspace";
 import { useEditorStore } from "../stores/editor";
 import { useSettingsStore } from "../stores/settings";
 import { invoke } from "@tauri-apps/api";
 import FileIO from "../io.ts";
-import { ref, nextTick } from "vue";
+import Modals from "../modal.ts";
 import {
   FolderIcon,
   FolderOpenIcon,
@@ -20,6 +21,7 @@ const props = defineProps({
   },
 });
 
+const contextEntry = ref<IFileEntry | null>(null);
 const contextMenuElement = ref<ContextMent | null>(null);
 const contextMenuVisible = ref(false);
 const contextMenuX = ref(0);
@@ -30,13 +32,14 @@ const editorStore = useEditorStore();
 const settingsStore = useSettingsStore();
 
 const fileIO = new FileIO(editorStore, settingsStore, workspaceStore);
+const modals = new Modals(editorStore, settingsStore, workspaceStore);
 
 async function openContextMenu(
   e: PointerEvent,
   index: number,
   entries: Array<IFileEntry>,
 ) {
-  const currentEntry = entries[index];
+  contextEntry.value = entries[index];
   contextMenuX.value = e.clientX;
   contextMenuY.value = e.clientY;
   contextMenuVisible.value = true;
@@ -102,13 +105,47 @@ function clickItem(index: number, entries: Array<IFileEntry>) {
       ref="contextMenuElement"
       @context-blur="contextMenuVisible = false"
     >
-      <ContextMenuItem>New File</ContextMenuItem>
-      <ContextMenuItem>New Folder</ContextMenuItem>
+      <ContextMenuItem
+        @click="
+          async () => {
+            modals.promptUser(
+              'New File',
+              'Enter file path',
+              (result, context) => fileIO.createNewFile(result, context),
+              contextEntry,
+              await fileIO.relative(
+                workspaceStore.workspaceFolder,
+                contextEntry.is_dir
+                  ? contextEntry.path
+                  : await fileIO.parent(contextEntry.path),
+              ),
+            );
+          }
+        "
+        >New File</ContextMenuItem
+      >
+      <ContextMenuItem
+        @click="
+          async () => {
+            modals.promptUser(
+              'New Folder',
+              'Enter folder path',
+              (result, context) => fileIO.createNewFolder(result, context),
+              contextEntry,
+              await fileIO.relative(
+                workspaceStore.workspaceFolder,
+                contextEntry.is_dir
+                  ? contextEntry.path
+                  : await fileIO.parent(contextEntry.path),
+              ),
+            );
+          }
+        "
+        >New Folder</ContextMenuItem
+      >
       <ContextMenuItem />
       <ContextMenuItem>Rename</ContextMenuItem>
       <ContextMenuItem>Delete</ContextMenuItem>
-      <ContextMenuItem />
-      <ContextMenuItem>Move</ContextMenuItem>
     </ContextMenu>
   </div>
 </template>

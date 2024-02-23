@@ -1,9 +1,9 @@
 use std::{
     cmp::Ordering,
     error::Error,
-    fs::{self, File},
+    fs::{self, DirBuilder, File},
     io::{Read, Write},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -59,6 +59,16 @@ impl FileEntry {
     }
 }
 
+pub fn create_file(path: &str) -> Result<(), Box<dyn Error>> {
+    let _f = File::create(path)?;
+    Ok(())
+}
+
+pub fn create_folder(path: &str) -> Result<(), Box<dyn Error>> {
+    DirBuilder::new().recursive(true).create(path)?;
+    Ok(())
+}
+
 pub fn read_file_content(path: &str) -> Result<String, Box<dyn Error>> {
     let mut f = File::open(path)?;
     let mut buf = String::new();
@@ -106,4 +116,21 @@ pub fn get_folder_content(path: &str) -> Result<Vec<FolderEntry>, Box<dyn Error>
     entries.sort();
 
     Ok(entries)
+}
+
+pub fn get_relative_path(from: &str, to: &str) -> Result<String, Box<dyn Error>> {
+    let path = Path::new(to);
+    let path = path.strip_prefix(from)?;
+    Ok(path.to_str().unwrap().to_string())
+}
+
+pub fn get_parent(path: &str) -> Result<String, Box<dyn Error>> {
+    let path = Path::new(path);
+    Ok(path.parent().unwrap().to_str().unwrap().to_string())
+}
+
+pub fn join_paths(start: &str, end: &str) -> Result<String, Box<dyn Error>> {
+    let mut path = PathBuf::from(start);
+    path.push(end);
+    Ok(path.to_str().unwrap().to_string())
 }

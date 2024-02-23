@@ -1,13 +1,14 @@
 <script setup lang="ts">
+import { appWindow } from "@tauri-apps/api/window";
+import { useWorkspaceStore } from "./stores/workspace";
 import MenuBar from "./components/MenuBar.vue";
 import SideBar from "./components/SideBar.vue";
 import StatusBar from "./components/StatusBar.vue";
 import TerminalComponent from "./components/TerminalComponent.vue";
 import TreeView from "./components/TreeView.vue";
-import { useWorkspaceStore } from "./stores/workspace";
-import { appWindow } from "@tauri-apps/api/window";
 import CollapsiblePanel from "./components/CollapsiblePanel.vue";
 import TabsComponent from "./components/TabsComponent.vue";
+import Prompt from "./components/Prompt.vue";
 
 const workspaceStore = useWorkspaceStore();
 
@@ -44,6 +45,9 @@ appWindow.onResized(async () => {
     </div>
     <div class="w-full">
       <StatusBar />
+    </div>
+    <div class="">
+      <Prompt />
     </div>
   </div>
 </template>

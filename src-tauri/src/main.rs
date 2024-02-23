@@ -51,6 +51,11 @@ async fn main() {
             commands::remove_indentation,
             commands::get_indent_size,
             commands::get_file_info,
+            commands::get_relative_path,
+            commands::get_parent,
+            commands::join_paths,
+            commands::create_file,
+            commands::create_folder,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

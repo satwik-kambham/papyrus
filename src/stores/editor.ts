@@ -8,5 +8,25 @@ export const useEditorStore = defineStore("editor", () => {
   const language = ref("Unknown");
   const encoding = ref("utf-8");
 
-  return { fileEntry, highlightedContent, bufferIdx, language, encoding };
+  // Prompt
+  const promptOpen = ref(false);
+  const promptTitle = ref("Title");
+  const promptDescription = ref("Description");
+  const promptResponse = ref("");
+  const promptCallback = ref(null);
+  const promptContext = ref(null);
+
+  return {
+    fileEntry,
+    highlightedContent,
+    bufferIdx,
+    language,
+    encoding,
+    promptOpen,
+    promptTitle,
+    promptDescription,
+    promptResponse,
+    promptCallback,
+    promptContext,
+  };
 });
