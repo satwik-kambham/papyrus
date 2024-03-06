@@ -25,7 +25,7 @@ async fn main() {
             #[cfg(debug_assertions)]
             {
                 let window = app.get_window("main").unwrap();
-                window.open_devtools();
+                // window.open_devtools();
             }
             Ok(())
         })

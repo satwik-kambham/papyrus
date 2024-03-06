@@ -58,7 +58,7 @@ const terminal = new Terminal({
   cursorStyle: "bar",
   cursorInactiveStyle: "none",
   fontSize: 14,
-  fontFamily: "DejaVuSansM Nerd Font Mono, monospace",
+  fontFamily: "FiraCode Nerd Font, DejaVuSansM Nerd Font Mono, monospace",
   theme: {
     background: "#282c34",
     foreground: "#abb2bf",

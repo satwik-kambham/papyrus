@@ -21,7 +21,7 @@ export const useSettingsStore = defineStore("settings", () => {
   const tabSize = ref(4);
   const autoSave = ref(AutoSaveType.OFF);
   const autoSaveDelay = ref(1000);
-  const eolSequence = ref(EOLSequence.CRLF);
+  const eolSequence = ref(EOLSequence.LF);
 
   return {
     editorFontSize,

@@ -18,7 +18,7 @@ pub fn init_pty(window: tauri::Window) -> Result<(), String> {
             pixel_height: 0,
         })
         .map_err(|err| err.to_string())?;
-    let cmd = CommandBuilder::new("pwsh.exe");
+    let cmd = CommandBuilder::new("zsh");
     let _child = pty_pair
         .slave
         .spawn_command(cmd)

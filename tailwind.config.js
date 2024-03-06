@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        code: "Consolas, 'Monaspace Neon Var', ui-monospace, monospace",
+        code: "'Monaspace Neon Var', Consolas, ui-monospace, monospace",
       },
       colors: {
         atom: {
