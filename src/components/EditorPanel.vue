@@ -2,20 +2,17 @@
 import { ref, computed, nextTick, onMounted, onUpdated } from "vue";
 import { invoke } from "@tauri-apps/api";
 import { useWorkspaceStore } from "../stores/workspace";
-import { useEditorStore } from "../stores/editor";
+import { useEditorStore, EditingMode } from "../stores/editor";
 import { useSettingsStore } from "../stores/settings";
-import { readText, writeText } from "@tauri-apps/api/clipboard";
 import Editor from "../editor";
-import FileIO from "../io";
 
 const workspaceStore = useWorkspaceStore();
 const editorStore = useEditorStore();
 const settingsStore = useSettingsStore();
 
 const editor = new Editor(editorStore, settingsStore, workspaceStore);
-const fileIO = new FileIO(editorStore, settingsStore, workspaceStore);
 
-const EditorPanelElement = ref<HTMLElement | null>(null);
+const EditorPanelElement = ref<HTMLElement | null>(null);.
 const gutterElement = ref<HTMLElement | null>(null);
 const editorElement = ref<HTMLElement | null>(null);
 const cursorElement = ref<HTMLElement | null>(null);
@@ -54,6 +51,8 @@ let selecting = false;
 
 onUpdated(() => {
   gutterWidth.value = gutterElement.value?.getBoundingClientRect().width ?? 0;
+  cursorWidth.value = dummyElement.value?.getBoundingClientRect().width ?? 0;
+  cursorHeight.value = dummyElement.value?.getBoundingClientRect().height ?? 0;
 });
 
 settingsStore.$subscribe(async () => {
@@ -333,6 +332,11 @@ function setCursorPosition() {
   hiddenInput.value?.focus();
 }
 
+function focus_editor(e: MouseEvent) {
+  e.preventDefault();
+  hiddenInput.value?.focus();
+}
+
 function get_mouse_position(e: MouseEvent) {
   let range;
   let textNode;
@@ -468,57 +472,26 @@ async function key_event(e: KeyboardEvent) {
   e.preventDefault();
 
   await asyncQueue.enqueue(async () => {
-    if (e.ctrlKey) {
-      if (e.key === "c") {
-        let selected_text = await editor.get_selected_text();
-        await writeText(selected_text);
-      } else if (e.key === "v") {
-        const t = await readText();
-        await editor.insert_character(t ?? "");
-      } else if (e.key === "x") {
-        let removed_text = await editor.remove_character();
-        await writeText(removed_text);
-      } else if (e.key === "z") {
-        await editor.undo();
-      } else if (e.key === "y") {
-        await editor.redo();
-      } else if (e.key === "s") {
-        await fileIO.saveCurrent();
-      } else if (e.key === "[") {
-        await editor.remove_indentation();
-      } else if (e.key === "]") {
-        await editor.add_indentation();
+    if (editorStore.editingMode == EditingMode.NORMAL) {
+      if (e.key == "i") {
+        editorStore.editingMode = EditingMode.INSERT;
+      } else if (e.key == "v") {
+        editorStore.editingMode = EditingMode.VISUAL;
+      } else {
+        await editor.normalModeMapping(e);
       }
-    } else if (e.key.length == 1 || e.key === "Enter") {
-      let key = e.key;
-      let indentSize = 0;
-      if (key === "Enter") {
-        key = "\n";
-        indentSize = await editor.get_indent_size();
+    } else if (editorStore.editingMode == EditingMode.INSERT) {
+      if (e.key == "Escape") {
+        editorStore.editingMode = EditingMode.NORMAL;
+      } else {
+        await editor.insertModeMapping(e);
       }
-      await editor.insert_character(key);
-      if (e.key === "Enter") {
-        await editor.add_indentation(indentSize);
+    } else if (editorStore.editingMode == EditingMode.VISUAL) {
+      if (e.key == "Escape") {
+        editorStore.editingMode = EditingMode.NORMAL;
+      } else {
+        await editor.visualModeMapping(e);
       }
-    } else if (e.key === "Tab") {
-      const spacing = " ".repeat(settingsStore.tabSize);
-      await editor.insert_character(spacing);
-    } else if (e.key === "Backspace") {
-      await editor.remove_character();
-    } else if (e.key === "Delete") {
-      await editor.remove_character(true);
-    } else if (e.key === "ArrowUp") {
-      await editor.move_cursor_up();
-    } else if (e.key === "ArrowLeft") {
-      await editor.move_cursor_left();
-    } else if (e.key === "ArrowDown") {
-      await editor.move_cursor_down();
-    } else if (e.key === "ArrowRight") {
-      await editor.move_cursor_right();
-    } else if (e.key === "Home") {
-      await editor.move_cursor_line_start();
-    } else if (e.key === "End") {
-      await editor.move_cursor_line_end();
     }
   });
 }
@@ -560,7 +533,7 @@ async function key_event(e: KeyboardEvent) {
               {{ startLine + index + 1 }}
             </span>
           </div>
-          <div class="pr-8 pl-2 opacity-0">
+          <div class="pr-8 pl-8 opacity-0">
             <span class="inline-block">
               {{ editorStore.highlightedContent.length + 1 }}
             </span>
@@ -572,10 +545,7 @@ async function key_event(e: KeyboardEvent) {
           ref="editorElement"
           class="bg-transparent min-h-full font-code antialiased leading-normal absolute min-w-full overflow-visible h-fit w-fit cursor-text z-10 select-none"
           @wheel="wheel_event"
-          @mousedown="mouse_down"
-          @dblclick="dblclick"
-          @mousemove="mouse_move"
-          @mouseup="mouse_up"
+          @mousedown="focus_editor"
           :style="{
             top: -visibleVOffset + 'px',
             left: visibleHOffset + 'px',
@@ -605,13 +575,19 @@ async function key_event(e: KeyboardEvent) {
         </div>
         <div
           ref="cursorElement"
-          class="absolute font-code antialiased leading-normal border-atom-primary border-l-2 pointer-events-none select-none animate-blink z-20"
+          class="absolute font-code antialiased leading-normal pointer-events-none select-none z-20"
           :style="{
             top: cursorVOffset - vOffset + 'px',
             left: visibleHOffset + cursorHOffset + 'px',
             width: cursorWidth + 'px',
             height: cursorHeight + 'px',
             'font-size': settingsStore.editorFontSize + 'px',
+          }"
+          :class="{
+            'animate-blink border-atom-primary border-l-2':
+              editorStore.editingMode == EditingMode.INSERT,
+            'bg-atom-text opacity-50':
+              editorStore.editingMode != EditingMode.INSERT,
           }"
         >
           <input
@@ -654,7 +630,7 @@ async function key_event(e: KeyboardEvent) {
             'font-size': settingsStore.editorFontSize + 'px',
           }"
         >
-          <span>x</span>
+          <span>X</span>
         </div>
       </div>
     </div>

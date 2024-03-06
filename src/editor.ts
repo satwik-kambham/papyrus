@@ -1,14 +1,124 @@
-import { useEditorStore } from "./stores/editor";
+import { useEditorStore, EditingMode } from "./stores/editor";
 import { useSettingsStore } from "./stores/settings";
 import { useWorkspaceStore } from "./stores/workspace";
 import { invoke } from "@tauri-apps/api";
+import { readText, writeText } from "@tauri-apps/api/clipboard";
+import FileIO from "./io";
 
 export default class Editor {
+  fileIO: FileIO;
+
   constructor(
     public editorStore: ReturnType<typeof useEditorStore>,
     public settingsStore: ReturnType<typeof useSettingsStore>,
     public workspaceStore: ReturnType<typeof useWorkspaceStore>,
-  ) {}
+  ) {
+    this.fileIO = new FileIO(editorStore, settingsStore, workspaceStore);
+  }
+
+  async normalModeMapping(e: KeyboardEvent) {
+    if (e.ctrlKey) {
+      if (e.key === "s") {
+        await this.fileIO.saveCurrent();
+      }
+    } else {
+      // Basic Navigation
+      if (e.key === "ArrowLeft" || e.key === "h") {
+        await this.move_cursor_left();
+      } else if (e.key === "ArrowRight" || e.key === "l") {
+        await this.move_cursor_right();
+      } else if (e.key === "ArrowUp" || e.key === "k") {
+        await this.move_cursor_up();
+      } else if (e.key === "ArrowDown" || e.key === "j") {
+        await this.move_cursor_down();
+      }
+
+      // Advanced navigation
+      else if (e.key === "Home" || e.key === "0") {
+        await this.move_cursor_line_start();
+      } else if (e.key === "End" || e.key === "$") {
+        await this.move_cursor_line_end();
+      }
+
+      // Editing
+      else if (e.key === "o") {
+        await this.move_cursor_line_end();
+        const indentSize = await this.get_indent_size();
+        await this.insert_character("\n");
+        await this.add_indentation(indentSize);
+        this.editorStore.editingMode = EditingMode.INSERT;
+      } else if (e.key === "a") {
+        await this.move_cursor_right();
+        this.editorStore.editingMode = EditingMode.INSERT;
+      }
+    }
+  }
+
+  async insertModeMapping(e: KeyboardEvent) {
+    if (e.ctrlKey) {
+      if (e.key === "c") {
+        const selected_text = await this.get_selected_text();
+        await writeText(selected_text);
+      } else if (e.key === "v") {
+        const t = await readText();
+        await this.insert_character(t ?? "");
+      } else if (e.key === "x") {
+        const removed_text = await this.remove_character();
+        await writeText(removed_text);
+      } else if (e.key === "z") {
+        await this.undo();
+      } else if (e.key === "y") {
+        await this.redo();
+      } else if (e.key === "s") {
+        await this.fileIO.saveCurrent();
+      } else if (e.key === "[") {
+        await this.remove_indentation();
+      } else if (e.key === "]") {
+        await this.add_indentation();
+      }
+    } else {
+      // Basic Navigation
+      if (e.key === "ArrowUp") {
+        await this.move_cursor_up();
+      } else if (e.key === "ArrowLeft") {
+        await this.move_cursor_left();
+      } else if (e.key === "ArrowDown") {
+        await this.move_cursor_down();
+      } else if (e.key === "ArrowRight") {
+        await this.move_cursor_right();
+      }
+
+      // Advanced navigation
+      else if (e.key === "Home") {
+        await this.move_cursor_line_start();
+      } else if (e.key === "End") {
+        await this.move_cursor_line_end();
+      }
+
+      // Editing
+      else if (e.key.length == 1 || e.key === "Enter") {
+        let key = e.key;
+        let indentSize = 0;
+        if (key === "Enter") {
+          key = "\n";
+          indentSize = await this.get_indent_size();
+        }
+        await this.insert_character(key);
+        if (e.key === "Enter") {
+          await this.add_indentation(indentSize);
+        }
+      } else if (e.key === "Tab") {
+        const spacing = " ".repeat(this.settingsStore.tabSize);
+        await this.insert_character(spacing);
+      } else if (e.key === "Backspace") {
+        await this.remove_character();
+      } else if (e.key === "Delete") {
+        await this.remove_character(true);
+      }
+    }
+  }
+
+  async visualModeMapping(e: KeyboardEvent) {}
 
   async closeBuffer(index: number) {
     await invoke("delete_buffer", {
