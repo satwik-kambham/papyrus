@@ -12,7 +12,7 @@ const settingsStore = useSettingsStore();
 
 const editor = new Editor(editorStore, settingsStore, workspaceStore);
 
-const EditorPanelElement = ref<HTMLElement | null>(null);.
+const EditorPanelElement = ref<HTMLElement | null>(null);
 const gutterElement = ref<HTMLElement | null>(null);
 const editorElement = ref<HTMLElement | null>(null);
 const cursorElement = ref<HTMLElement | null>(null);

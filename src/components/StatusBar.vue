@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useEditorStore } from "../stores/editor";
+import { useEditorStore, EditingMode } from "../stores/editor";
 import { useWorkspaceStore } from "../stores/workspace";
 import { useSettingsStore, EOLSequence } from "../stores/settings";
 
@@ -45,6 +45,27 @@ function changeEOLSequence() {
       {{ workspaceStore.currentSelection.end.row + 1 }}
       : Col
       {{ workspaceStore.currentSelection.end.column + 1 }}
+    </div>
+    <div class="">
+      <div
+        v-if="editorStore.editingMode == EditingMode.NORMAL"
+        class="p-1.5 bg-atom-highlight"
+      >
+        NORMAL
+      </div>
+      <div
+        v-else-if="editorStore.editingMode == EditingMode.INSERT"
+        class="p-1.5 bg-atom-highlight-Green text-atom-text-dark"
+      >
+        INSERT
+      </div>
+      <div
+        v-else-if="editorStore.editingMode == EditingMode.VISUAL"
+        class="p-1.5 bg-atom-highlight-Orange text-atom-text-dark"
+      >
+        VISUAL
+      </div>
+      <div v-else>UNKNOWN</div>
     </div>
     <div class="grow"></div>
     <div class="px-1.5 flex">
