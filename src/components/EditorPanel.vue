@@ -136,6 +136,33 @@ async function updateVisibleContent() {
     0,
     editorStore.highlightedContent.length - 1,
   );
+  const s = workspaceStore.currentSelection;
+  let start_row = s.start.row;
+  let end_row = s.end.row;
+  if (start_row > end_row) {
+    let buf = end_row;
+    end_row = start_row;
+    start_row = buf;
+  }
+  if (startLine.value > 0 && start_row < startLine.value) {
+    // Scroll till current line is at the first visible line
+    startLine.value = start_row;
+    vOffset.value = cursorHeight.value * start_row;
+    endLine.value = clamp(
+      Math.ceil((vOffset.value + visibleHeight.value) / cursorHeight.value) - 1,
+      0,
+      editorStore.highlightedContent.length - 1,
+    );
+  } else if (endLine.value < editorStore.highlightedContent.length - 1 && end_row > endLine.value) {
+    // Scroll till current line is at the last visible line
+    endLine.value = end_row;
+    vOffset.value = (cursorHeight.value * (end_row + 1)) - visibleHeight.value;
+    startLine.value = clamp(
+      Math.floor(vOffset.value / cursorHeight.value),
+      0,
+      editorStore.highlightedContent.length - 1,
+    );
+  }
   visibleContent.value = editorStore.highlightedContent.slice(
     startLine.value,
     endLine.value + 1,
@@ -197,7 +224,7 @@ function wheel_event(e: WheelEvent) {
       50,
     0,
   );
-  vOffset.value = clamp(vOffset.value + e.deltaY * 0.5, 0, maxVOffset.value);
+//  vOffset.value = clamp(vOffset.value + e.deltaY * 0.5, 0, maxVOffset.value);
   workspaceStore.openEditors[workspaceStore.currentEditorIndex].scroll = {
     hOffset: hOffset.value,
     vOffset: vOffset.value,

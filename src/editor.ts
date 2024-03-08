@@ -38,6 +38,10 @@ export default class Editor {
         await this.move_cursor_line_start();
       } else if (e.key === "End" || e.key === "$") {
         await this.move_cursor_line_end();
+      } else if (e.key === "g") {
+        await this.move_cursor_document_start();
+      } else if (e.key === "G") {
+        await this.move_cursor_document_end();
       }
 
       // Editing
@@ -452,6 +456,17 @@ export default class Editor {
     const s = this.workspaceStore.currentSelection;
     const column = await this.get_row_length(s.end.row);
     this.workspaceStore.updateSelection(s.end.row, column, s.end.row, column);
+  }
+  
+  // Move cursor to document start
+  async move_cursor_document_start() {
+    this.workspaceStore.updateSelection(0, 0, 0, 0);
+  }
+  
+  // Move cursor to document end
+  async move_cursor_document_end() {
+    const totalLines = await this.get_lines_length();
+    this.workspaceStore.updateSelection(totalLines - 1, 0, totalLines - 1, 0);
   }
 
   // Undo last action
