@@ -18,7 +18,9 @@ pub fn init_pty(window: tauri::Window) -> Result<(), String> {
             pixel_height: 0,
         })
         .map_err(|err| err.to_string())?;
-    let cmd = CommandBuilder::new("zsh");
+    let mut cmd = CommandBuilder::new("zsh");
+    cmd.env("TERM", "xterm-256color");
+    cmd.env("COLORTERM", "truecolor");
     let _child = pty_pair
         .slave
         .spawn_command(cmd)
